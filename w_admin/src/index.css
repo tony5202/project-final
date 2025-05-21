@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* App.css หรือ index.css */
+body {
+    font-family: 'Noto Sans Lao Looped', 'Phetsarath', sans-serif;
+  }
+  
