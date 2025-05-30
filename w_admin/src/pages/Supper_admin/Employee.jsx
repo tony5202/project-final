@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { format } from 'date-fns';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const Employee = () => {
   const [employees, setEmployees] = useState([]);
@@ -11,7 +13,7 @@ const Employee = () => {
     address: '',
     username: '',
     password: '',
-    bd: '',
+    bd: null, // เปลี่ยนเป็น null เพื่อใช้กับ DatePicker
     role: 'admin'
   });
   const [editingId, setEditingId] = useState(null);
@@ -68,8 +70,13 @@ const Employee = () => {
     if (!validateForm()) return;
 
     try {
+      const formattedData = {
+        ...formData,
+        bd: formData.bd ? format(formData.bd, 'yyyy-MM-dd') : null // แปลงวันที่เป็น YYYY-MM-DD สำหรับ API
+      };
+
       if (editingId) {
-        await axios.put(`http://localhost:8000/api/employee/${editingId}`, formData);
+        await axios.put(`http://localhost:8000/api/employee/${editingId}`, formattedData);
         Toast.fire({
           icon: 'success',
           title: 'ແກ້ໄຂຂໍ້ມູນສຳເລັດ'
@@ -85,7 +92,7 @@ const Employee = () => {
           cancelButtonText: 'ບັນທຶກແລະລ້າງຟອມ'
         });
 
-        await axios.post('http://localhost:8000/api/employee', formData);
+        await axios.post('http://localhost:8000/api/employee', formattedData);
         Toast.fire({
           icon: 'success',
           title: 'ເພີ່ມຂໍ້ມູນສຳເລັດ'
@@ -142,7 +149,7 @@ const Employee = () => {
       address: employee.address,
       username: employee.username,
       password: employee.password,
-      bd: employee.bd ? new Date(employee.bd).toISOString().split('T')[0] : '',
+      bd: employee.bd ? new Date(employee.bd) : null, // แปลงเป็น Date object สำหรับ DatePicker
       role: employee.role
     });
     setEditingId(employee.emp_id);
@@ -156,7 +163,7 @@ const Employee = () => {
       address: '',
       username: '',
       password: '',
-      bd: '',
+      bd: null,
       role: 'admin'
     });
     setEditingId(null);
@@ -164,8 +171,8 @@ const Employee = () => {
   };
 
   const formatDate = (date) => {
-    if (!date) return '';
-    return format(new Date(date), 'dd/MM/yyyy');
+    if (!date) return '-';
+    return format(new Date(date), 'dd/MM/yyyy'); // เปลี่ยนรูปแบบเป็น DD/MM/YYYY
   };
 
   return (
@@ -238,13 +245,18 @@ const Employee = () => {
             {errors.password && <p className="text-red-500 text-sm mt-1 font-noto-sans-lao">{errors.password}</p>}
           </div>
           <div className="relative">
-            <input
-              type="date"
-              value={formData.bd}
-              onChange={(e) => setFormData({ ...formData, bd: e.target.value })}
+            <DatePicker
+              selected={formData.bd}
+              onChange={(date) => setFormData({ ...formData, bd: date })}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="ວັນເກີດ (ວວ/ດດ/ປປປປ)"
               className="w-full border border-gray-300 rounded-md p-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 font-noto-sans-lao"
               required
               aria-label="ວັນເກີດພະນັກງານ"
+              maxDate={new Date('2025-05-26')} // จำกัดวันที่สูงสุดเป็นวันที่ปัจจุบัน (26/05/2025)
+              showYearDropdown
+              yearDropdownItemNumber={100}
+              scrollableYearDropdown
             />
             {errors.bd && <p className="text-red-500 text-sm mt-1 font-noto-sans-lao">{errors.bd}</p>}
           </div>

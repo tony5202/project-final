@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-
-// Simple component replacements if you don't want to use shadcn/ui
+// Simple component replacements (unchanged)
 const Input = (props) => <input className="w-full p-3 border rounded-lg shadow-sm" {...props} />;
 const Button = ({ children, variant, className = "", ...props }) => {
   const variantClasses = {
@@ -25,7 +24,6 @@ const CardContent = ({ children, className = "" }) => <div className={`p-6 ${cla
 const Textarea = (props) => <textarea className="w-full p-3 border rounded-lg shadow-sm" {...props} />;
 const Label = ({ children }) => <label className="block font-medium mb-2">{children}</label>;
 
-// Modal component for confirmations
 const Modal = ({ isOpen, onClose, onConfirm, title, message }) => {
   if (!isOpen) return null;
   
@@ -36,14 +34,13 @@ const Modal = ({ isOpen, onClose, onConfirm, title, message }) => {
         <p className="mb-8">{message}</p>
         <div className="flex justify-end space-x-4">
           <Button variant="outline" onClick={onClose}>ຍົກເລີກ</Button>
-          <Button variant="destructive" onClick={onConfirm}>ຢຶນຢັນການລົບ</Button>
+          <Button variant="destructive" onClick={onConfirm}>ຢຶນຢັນການປິດ</Button>
         </div>
       </div>
     </div>
   );
 };
 
-// Alert component for notifications
 const Alert = ({ type, message, onClose }) => {
   if (!message) return null;
   
@@ -56,7 +53,7 @@ const Alert = ({ type, message, onClose }) => {
   return (
     <div className={`${typeClasses[type]} px-5 py-4 rounded-lg border mb-6 flex justify-between items-center`}>
       <span>{message}</span>
-      <button onClick={onClose} className="font-bold text-xl">&times;</button>
+      <button onClick={onClose} className="font-bold text-xl">×</button>
     </div>
   );
 };
@@ -71,17 +68,17 @@ const Stadium = () => {
   });
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
+  const [disableModal, setDisableModal] = useState({ open: false, id: null });
   const [alert, setAlert] = useState({ type: '', message: '' });
   const [filePreview, setFilePreview] = useState(null);
+  const [showInactive, setShowInactive] = useState(false); // Toggle for active/inactive stadiums
 
   const API_URL = 'http://localhost:8000/api/stadium';
 
-  // Function to fetch all stadiums
   const fetchStadiums = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(API_URL);
+      const res = await axios.get(API_URL); // Fetches active stadiums by default
       setStadiums(res.data);
     } catch (err) {
       console.error('Error fetching stadiums', err);
@@ -98,19 +95,15 @@ const Stadium = () => {
     fetchStadiums();
   }, []);
 
-  // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
   };
 
-  // Handle file input changes with preview
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setForm({ ...form, image: file });
-      
-      // Create preview URL
       const reader = new FileReader();
       reader.onload = () => {
         setFilePreview(reader.result);
@@ -119,7 +112,6 @@ const Stadium = () => {
     }
   };
 
-  // Handle form submission (create or update)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -163,14 +155,12 @@ const Stadium = () => {
     }
   };
 
-  // Reset form after submission or cancellation
   const resetForm = () => {
     setForm({ price: '', price2: '', dtail: '', image: null });
     setEditId(null);
     setFilePreview(null);
   };
 
-  // Handle edit button click
   const handleEdit = (stadium) => {
     setForm({
       price: stadium.price,
@@ -179,59 +169,73 @@ const Stadium = () => {
       image: null,
     });
     setEditId(stadium.st_id);
-    
-    // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Handle delete confirmation
-  const handleDeleteConfirm = async () => {
+  const handleDisableConfirm = async () => {
     setLoading(true);
     try {
-      await axios.delete(`${API_URL}/${deleteModal.id}`);
+      await axios.put(`${API_URL}/disable/${disableModal.id}`);
       fetchStadiums();
       setAlert({
         type: 'success',
-        message: 'ລົບສຳເລັດ !'
+        message: 'ປິດສຳເລັດ !'
       });
     } catch (err) {
-      console.error('Error deleting stadium', err);
+      console.error('Error disabling stadium', err);
       setAlert({
         type: 'error',
-        message: 'Failed to delete stadium. Please try again.'
+        message: 'Failed to disable stadium. Please try again.'
       });
     } finally {
-      setDeleteModal({ open: false, id: null });
+      setDisableModal({ open: false, id: null });
       setLoading(false);
     }
   };
 
-  // Handle delete button click
-  const handleDelete = (id) => {
-    setDeleteModal({ open: true, id });
+  const handleDisable = (id) => {
+    setDisableModal({ open: true, id });
+  };
+
+  // Optional: Reactivate stadium
+  const handleReactivate = async (id) => {
+    setLoading(true);
+    try {
+      await axios.put(`${API_URL}/reactivate/${id}`);
+      fetchStadiums();
+      setAlert({
+        type: 'success',
+        message: 'ເປີດສຳເລັດ !'
+      });
+    } catch (err) {
+      console.error('Error reactivating stadium', err);
+      setAlert({
+        type: 'error',
+        message: 'Failed to reactivate stadium. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto p-8">
       <h1 className="text-3xl font-bold mb-6 text-center">ຈັດການເດີ່ນ</h1>
       
-      {/* Alert notifications */}
       <Alert 
         type={alert.type} 
         message={alert.message} 
         onClose={() => setAlert({ type: '', message: '' })} 
       />
 
-      {/* Confirmation Modal */}
       <Modal
-        isOpen={deleteModal.open}
-        onClose={() => setDeleteModal({ open: false, id: null })}
-        onConfirm={handleDeleteConfirm}
-        title="ຢຶນຢັນການລົບ"
-        message="ໝັ້ນໃຈບໍ່ວ່າຈະລົບເດີ່ນນີ້? ຂໍໃສ່ລາຍລະອຽດເດີ່ນ ສາມາດແກ້ໄຂໄດ້."
+        isOpen={disableModal.open}
+        onClose={() => setDisableModal({ open: false, id: null })}
+        onConfirm={handleDisableConfirm}
+        title="ຢຶນຢັນການປິດ"
+        message="ໝັ້ນໃຈບໍ່ວ່າຈະປິດເດີ່ນນີ້? ສາມາດເປີດໃຊ້ຄືນໄດ້ພາຍຫຼັງ."
       />
 
-      {/* Form */}
       <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-6 bg-white p-8 rounded-xl shadow-md">
         <h2 className="text-2xl font-bold mb-6">{editId ? 'ແກ້ໄຂເດີ່ນ' : 'ເພີ່ມເດີ່ນ'}</h2>
         
@@ -309,7 +313,6 @@ const Stadium = () => {
 
       <hr className="my-10" />
 
-      {/* Stadium List */}
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-2xl font-semibold">ຂໍ້ມູນເດີ່ນທັງໝົດ</h2>
         <Button 
@@ -320,14 +323,14 @@ const Stadium = () => {
           {loading ? 'ກຳລັງໂຫຼດຂໍ້ມູນຄືນໃໝ່...' : '🔄 ໂຫຼດຂໍ້ມູນຄືນໃໝ່'}
         </Button>
       </div>
-      
+
       {loading && !stadiums.length ? (
         <div className="text-center py-10">
           <p className="text-gray-500">Loading stadiums...</p>
         </div>
       ) : stadiums.length === 0 ? (
         <div className="text-center py-10 bg-gray-50 rounded-xl">
-          <p className="text-gray-500">ບໍ່ມິຂໍ້ມູນເດີ່ນ !</p>
+          <p className="text-gray-500">ບໍ່ມີຂໍ້ມູນເດີ່ນ !</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -345,22 +348,37 @@ const Stadium = () => {
                 />
                 <div>
                   <p className="font-bold text-2xl">{stadium.dtail}</p>
-                  <p className="text-gray-600  text-xl">
-                        ລາຄາຈອງເຕະບານ: <span className="font-bold text-green-600">{stadium.price}</span> ກີບ
-</p>
-
-                  <p className="text-gray-600  text-xl">   ລາຄາຈອງກິດຈະກຳ:<span className="font-bold text-green-600">{stadium.price2}</span> ກີບ</p>
+                  <p className="text-gray-600 text-xl">
+                    ລາຄາຈອງເຕະບານ: <span className="font-bold text-green-600">{stadium.price}</span> ກີບ
+                  </p>
+                  <p className="text-gray-600 text-xl">
+                    ລາຄາຈອງກິດຈະກຳ: <span className="font-bold text-green-600">{stadium.price2}</span> ກີບ
+                  </p>
+                  <p className="text-gray-600 text-xl">
+                    ສະຖານະ: <span className={stadium.status === 'active' ? 'text-green-600' : 'text-red-600'}>
+                      {stadium.status === 'active' ? 'ເປີດໃຊ້' : 'ປິດໃຊ້'}
+                    </span>
+                  </p>
                 </div>
                 <div className="flex justify-between mt-6">
-                  <button className="bg-yellow-500 text-white px-4 py-2 rounded-md mr-2" onClick={() => handleEdit(stadium)}>
+                  <Button className="bg-yellow-500 text-white" onClick={() => handleEdit(stadium)}>
                     ແກ້ໄຂເດີ່ນ
-                  </button>
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => handleDelete(stadium.st_id)}
-                  >
-                    ລົບເດີ່ນ
                   </Button>
+                  {stadium.status === 'active' ? (
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => handleDisable(stadium.st_id)}
+                    >
+                      ປິດເດີ່ນ
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="default" 
+                      onClick={() => handleReactivate(stadium.st_id)}
+                    >
+                      ເປີດເດີ່ນຄືນ
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

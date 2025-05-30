@@ -63,14 +63,39 @@ exports.editStadium = (req, res) => {
   });
 };
 
-exports.deleteStadium = (req, res) => {
+exports.disableStadium = (req, res) => {
   const { st_id } = req.params;
 
-  db.query('DELETE FROM stadium WHERE st_id = ?', [st_id], (error, results) => {
-    if (error) {
-      console.error('Error deleting stadium:', error.message);
-      return res.status(500).json({ msg: 'Error deleting stadium' });
+  db.query(
+    'UPDATE stadium SET status = ? WHERE st_id = ?',
+    ['inactive', st_id],
+    (error, results) => {
+      if (error) {
+        console.error('Error disabling stadium:', error.message);
+        return res.status(500).json({ msg: 'Error disabling stadium' });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ msg: 'Stadium not found' });
+      }
+      return res.status(200).json({ msg: 'Stadium disabled successfully' });
     }
-    return res.status(200).json({ msg: 'Delete stadium success' });
-  });
+  );
+};
+exports.reactivateStadium = (req, res) => {
+  const { st_id } = req.params;
+
+  db.query(
+    'UPDATE stadium SET status = ? WHERE st_id = ?',
+    ['active', st_id],
+    (error, results) => {
+      if (error) {
+        console.error('Error reactivating stadium:', error.message);
+        return res.status(500).json({ msg: 'Error reactivating stadium' });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ msg: 'Stadium not found' });
+      }
+      return res.status(200).json({ msg: 'Stadium reactivated successfully' });
+    }
+  );
 };

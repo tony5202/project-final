@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:app_ball/Modle/user_model.dart';
 import 'package:app_ball/ipapp.dart';
 import 'package:app_ball/page/bookingscreen.dart';
@@ -5,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
-
 
 class Homepage extends StatefulWidget {
   final User user;
@@ -17,38 +17,63 @@ class Homepage extends StatefulWidget {
 }
 
 class _HomepageState extends State<Homepage> {
-  late List<dynamic> stadiums;
+  List<dynamic> stadiums = [];
   bool isLoading = true;
+  String? errorMessage;
+
+  Timer? _refreshTimer; // <-- Timer สำหรับรีเฟรชทุก 1 วิ
 
   @override
   void initState() {
     super.initState();
-    _fetchStadiums();
+    _fetchStadiums(); // ดึงครั้งแรก
+
+    // // ดึงข้อมูลซ้ำทุก ๆ 1 วินาที (real‑time)
+    // _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    //   _fetchStadiums(showLoading: false); // ไม่โชว์ progress ทุกครั้ง
+    // });
   }
 
-  Future<void> _fetchStadiums() async {
+  @override
+  void dispose() {
+    _refreshTimer?.cancel(); // ยกเลิก Timer เมื่อหน้าโดน dispose
+    super.dispose();
+  }
+
+  Future<void> _fetchStadiums({bool showLoading = true}) async {
     try {
-      setState(() {
-        isLoading = true;
-      });
+      if (showLoading) {
+        setState(() {
+          isLoading = true;
+          errorMessage = null;
+        });
+      }
 
       final response = await http.get(
         Uri.parse('${Ipapp.baseUrl}/api/stadium'),
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': 'Bearer ${widget.user.token}',
+        },
       );
 
       if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
         setState(() {
-          stadiums = jsonDecode(response.body);
+          stadiums =
+              data.where((stadium) => stadium['status'] == 'active').toList();
           isLoading = false;
         });
       } else {
-        throw Exception('Failed to load stadiums');
+        throw Exception(
+            'ບໍ່ສາມາດດຶງຂໍ້ມູນເດີ່ນໄດ້: ${response.statusCode}');
       }
     } catch (e) {
       setState(() {
         isLoading = false;
+        errorMessage = e.toString();
       });
-      _showErrorDialog(e.toString());
+      _showErrorDialog('ບໍ່ສາມາດດຶງຂໍ້ມູນເດີ່ນໄດ້: $e');
     }
   }
 
@@ -56,12 +81,12 @@ class _HomepageState extends State<Homepage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Error'),
+        title: const Text('ຜິດພາດ'),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: const Text('ຕົກລົງ'),
           ),
         ],
       ),
@@ -70,136 +95,160 @@ class _HomepageState extends State<Homepage> {
 
   @override
   Widget build(BuildContext context) {
-    final priceFormat = NumberFormat("#,##0", "en_US");
+    final priceFormat = NumberFormat('#,##0', 'en_US');
 
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.user.username} ຈອງເດີ່ນ'),
         backgroundColor: Colors.green[800],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchStadiums,
+            tooltip: 'ໂຫຼດຂໍ້ມູນຄືນໃໝ່',
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchStadiums,
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
-            : ListView.builder(
-                itemCount: stadiums.length,
-                itemBuilder: (context, index) {
-                  final stadium = stadiums[index];
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Card(
-                      elevation: 5,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      color: Colors.white,
-                      child: InkWell(
-                        // Make the card tappable
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => BookingScreen(
-                                user: widget.user,
-                                stadium: stadium,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(15),
-                                child: Image.network(
-                                  stadium['image'] ?? '',
-                                  width: double.infinity,
-                                  height: 180,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.broken_image, size: 180),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                stadium['dtail'] ?? 'No Name',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green[700],
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text.rich(
-                                TextSpan(
-                                  text: 'ລາຄາເຕະບານ : ',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey,
-                                  ),
-                                  children: <TextSpan>[
-                                    TextSpan(
-                                      text:
-                                          '${priceFormat.format(double.tryParse(stadium['price']?.toString() ?? '0') ?? 0)} ',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green[800],
-                                      ),
-                                    ),
-                                    const TextSpan(
-                                      text: 'ກີບ',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text.rich(
-                                TextSpan(
-                                  text: 'ລາຄາຈັດກິດຈະກຳ : ',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey,
-                                  ),
-                                  children: <TextSpan>[
-                                    TextSpan(
-                                      text:
-                                          '${priceFormat.format(double.tryParse(stadium['price2']?.toString() ?? '0') ?? 0)} ',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green[800],
-                                      ),
-                                    ),
-                                    const TextSpan(
-                                      text: 'ກີບ',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+            : errorMessage != null
+                ? _buildErrorState()
+                : stadiums.isEmpty
+                    ? _buildEmptyState()
+                    : _buildStadiumList(priceFormat),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _fetchStadiums,
-        child: const Icon(Icons.refresh),
-        backgroundColor: Colors.green[800],
+    );
+  }
+
+  // แยก widget ย่อย ๆ เพื่อให้อ่านง่าย
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            errorMessage ?? '',
+            style: TextStyle(fontSize: 18, color: Colors.red[600]),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _fetchStadiums,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green[800],
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            child: const Text('ລອງໃໝ່ອີກຄັ້ງ', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Text(
+        'ບໍ່ມີເດີ່ນທີ່ພ້ອມໃຊ້ງານ',
+        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+      ),
+    );
+  }
+
+  Widget _buildStadiumList(NumberFormat priceFormat) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(8.0),
+      itemCount: stadiums.length,
+      itemBuilder: (context, index) {
+        final stadium = stadiums[index];
+        return Card(
+          elevation: 5,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          color: Colors.white,
+          child: InkWell(
+            onTap: () {
+              if (stadium['status'] == 'active') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BookingScreen(
+                      user: widget.user,
+                      stadium: stadium,
+                    ),
+                  ),
+                );
+              } else {
+                _showErrorDialog(
+                    'ສະໜາມນີ້ບໍ່ສາມາດຈອງໄດ້ ເນື່ອງຈາກຖືກປິດໃຊ້ງານ');
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStadiumImage(stadium),
+                  const SizedBox(height: 10),
+                  Text(
+                    stadium['dtail'] ?? 'ບໍ່ມີຊື່',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[700]),
+                  ),
+                  const SizedBox(height: 5),
+                  _buildPriceRow(
+                      'ລາຄາເຕະບານ: ', stadium['price'], priceFormat),
+                  const SizedBox(height: 5),
+                  _buildPriceRow(
+                      'ລາຄາຈັດກິດຈະກຳ: ', stadium['price2'], priceFormat),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStadiumImage(dynamic stadium) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(15),
+      child: Image.network(
+        stadium['image'] ?? '',
+        width: double.infinity,
+        height: 180,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          height: 180,
+          color: Colors.grey[300],
+          child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceRow(String label, dynamic price, NumberFormat priceFormat) {
+    return Text.rich(
+      TextSpan(
+        text: label,
+        style: const TextStyle(fontSize: 16, color: Colors.grey),
+        children: <TextSpan>[
+          TextSpan(
+            text:
+                '${priceFormat.format(double.tryParse(price?.toString() ?? '0') ?? 0)} ',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.green[800],
+            ),
+          ),
+          const TextSpan(
+            text: 'ກີບ',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ],
       ),
     );
   }

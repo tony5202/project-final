@@ -4,6 +4,8 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const Expen = () => {
   const navigate = useNavigate();
@@ -11,7 +13,7 @@ const Expen = () => {
     detail: '',
     amount: '',
     quantity: '',
-    date: '',
+    date: null, // เปลี่ยนเป็น null เพื่อใช้กับ DatePicker
     id_pro: ''
   });
   const [expenses, setExpenses] = useState([]);
@@ -66,7 +68,12 @@ const Expen = () => {
   }, []);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleDateChange = (date) => {
+    setFormData(prev => ({ ...prev, date }));
   };
 
   const handleSubmit = async (e) => {
@@ -79,11 +86,12 @@ const Expen = () => {
       await axios.post('http://localhost:8000/api/expense', {
         ...formData,
         id_pro: formData.id_pro || null,
-        quantity: formData.quantity ? Number(formData.quantity) : null
+        quantity: formData.quantity ? Number(formData.quantity) : null,
+        date: formData.date ? formatDate(formData.date) : null // แปลงวันที่เป็น YYYY-MM-DD
       });
       toast.success('ເພີ່ມລາຍຈ່າຍສຳເລັດ!');
       fetchExpenses();
-      setFormData({ detail: '', amount: '', quantity: '', date: '', id_pro: '' });
+      setFormData({ detail: '', amount: '', quantity: '', date: null, id_pro: '' });
     } catch (err) {
       toast.error(err.response?.data?.msg || 'ເພີ່ມລາຍຈ່າຍລົ້ມເຫຼວ');
     }
@@ -148,12 +156,12 @@ const Expen = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ວັນທີ</label>
-            <input
-              type="date"
-              name="date"
+            <DatePicker
+              selected={formData.date}
+              onChange={handleDateChange}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="ເລືອກວັນທີ (ວວ/ດດ/ປປປປ)"
               className="w-full px-4 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-gray-50"
-              onChange={handleChange}
-              value={formData.date}
               required
               aria-required="true"
             />

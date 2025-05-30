@@ -5,6 +5,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Download, Search, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { parse, format, addDays, subDays } from 'date-fns';
 
 const Report_booking = () => {
   const navigate = useNavigate();
@@ -13,8 +16,8 @@ const Report_booking = () => {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [searchParams, setSearchParams] = useState({
-    startDate: '',
-    endDate: '',
+    startDate: null,
+    endDate: null,
     status: '',
   });
 
@@ -28,17 +31,39 @@ const Report_booking = () => {
     });
   };
 
-  // Format date to DD/MM/YYYY, add 1 day for Event bookings
-  const formatDate = (dateStr, bookingType) => {
+  // Format date to DD/MM/YYYY, add 1 day for non-checkin dates, and an extra day for Event bookings
+  const formatDisplayDate = (dateStr, isCheckinDate = false, bookingType = null) => {
     if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return '-';
-    if (bookingType === 'Event') {
-      date.setDate(date.getDate() + 1);
+    try {
+      const normalizedDateStr = dateStr.split('T')[0];
+      const date = parse(normalizedDateStr, 'yyyy-MM-dd', new Date());
+      if (isNaN(date)) return '-';
+      // For checkin_date, display as-is; for others (e.g., booking_date), add 1 day
+      let displayDate = isCheckinDate ? date : addDays(date, 1);
+      // Add an extra day for Event bookings (only for booking_date, not checkin_date)
+      if (!isCheckinDate && bookingType === 'Event') {
+        displayDate = addDays(displayDate, 1); // Extra day for Event
+      }
+      return format(displayDate, 'dd/MM/yyyy');
+    } catch (error) {
+      console.error('Date parsing error:', error, 'Input:', dateStr);
+      return '-';
     }
-    return `${String(date.getDate()).padStart(2, '0')}/${String(
-      date.getMonth() + 1
-    ).padStart(2, '0')}/${date.getFullYear()}`;
+  };
+
+  // Format date for filtering (yyyy-MM-dd)
+  const formatDate = (date) => {
+    if (!date) return null;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Format date for display (add 1 day for search params)
+  const formatSearchDisplayDate = (date) => {
+    if (!date) return 'ທຸກວັນ';
+    return format(addDays(date, 1), 'dd/MM/yyyy');
   };
 
   // Format time slot, return 'ໝົດມື້' for Event bookings
@@ -82,33 +107,31 @@ const Report_booking = () => {
   const handleSearch = () => {
     const { startDate, endDate, status } = searchParams;
 
-    // Validate date range
-    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+    if (startDate && endDate && startDate > endDate) {
       toast.error('ວັນທີ່ເລີ່ມຕ້ອງກ່ອນວັນທີ່ສິ້ນສຸດ');
       return;
     }
 
+    // Adjust dates for query (subtract 1 day)
+    const queryStartDate = startDate ? subDays(startDate, 1) : null;
+    const queryEndDate = endDate ? subDays(endDate, 1) : null;
+
     let filtered = bookings;
 
-    // Filter by date range
     if (startDate || endDate) {
       filtered = filtered.filter((booking) => {
-        const bookingDate = new Date(booking.booking_date);
-        if (isNaN(bookingDate.getTime())) return false;
+        const bookingDate = booking.booking_date.split('T')[0];
+        const parsedBookingDate = parse(bookingDate, 'yyyy-MM-dd', new Date());
+        if (isNaN(parsedBookingDate.getTime())) return false;
 
-        // For Event bookings, compare with date shifted back by 1 day
-        let compareDate = new Date(booking.booking_date);
-        if (booking.booking_type === 'Event') {
-          compareDate.setDate(compareDate.getDate() + 1);
-        }
+        const compareDate = booking.booking_type === 'Event' ? addDays(parsedBookingDate, 1) : parsedBookingDate;
 
-        const start = startDate ? new Date(startDate) : new Date('1970-01-01');
-        const end = endDate ? new Date(endDate) : new Date('9999-12-31');
-        return compareDate >= start && compareDate <= end;
+        const start = queryStartDate ? formatDate(queryStartDate) : '1970-01-01';
+        const end = queryEndDate ? formatDate(queryEndDate) : '9999-12-31';
+        return bookingDate >= start && bookingDate <= end;
       });
     }
 
-    // Filter by status
     if (status) {
       filtered = filtered.filter((booking) => booking.status === status);
     }
@@ -118,7 +141,7 @@ const Report_booking = () => {
   };
 
   const handleClear = () => {
-    setSearchParams({ startDate: '', endDate: '', status: '' });
+    setSearchParams({ startDate: null, endDate: null, status: '' });
     setFilteredBookings(bookings);
     toast.info('ລ້າງຂໍ້ມູນການຄົ້ນຫາສຳເລັດ');
   };
@@ -131,7 +154,6 @@ const Report_booking = () => {
 
     setExporting(true);
     try {
-      console.log('Starting Excel export');
       const headers = [
         'ລະຫັດການຈອງ',
         'ຜູ້ຈອງ',
@@ -149,7 +171,7 @@ const Report_booking = () => {
         booking.user_name || '-',
         booking.user_phone || '-',
         booking.stadium_dtail || '-',
-        formatDate(booking.booking_date, booking.booking_type),
+        formatDisplayDate(booking.booking_date, false, booking.booking_type),
         formatTimeSlot(booking.time_slot, booking.booking_type),
         formatCurrency(booking.price),
         booking.username || '-',
@@ -157,9 +179,7 @@ const Report_booking = () => {
         booking.booking_type || '-',
       ]);
 
-      // Add empty row for spacing
-      const spacer = ['', '', '', '', '', '', '', '', ''];
-      // Add total bookings row
+      const spacer = ['', '', '', '', '', '', '', '', '', ''];
       const totalRow = [
         '',
         '',
@@ -169,12 +189,14 @@ const Report_booking = () => {
         '',
         '',
         'ຈຳນວນການຈອງທັງໝົດ',
+        '',
         `${filteredBookings.length} ລາຍການ`,
       ];
-      // Add filter details
       const { startDate, endDate, status } = searchParams;
       const filterRows = [];
       if (startDate || endDate) {
+        const displayStart = startDate ? formatSearchDisplayDate(startDate) : 'ທຸກວັນ';
+        const displayEnd = endDate ? formatSearchDisplayDate(endDate) : 'ທຸກວັນ';
         filterRows.push([
           '',
           '',
@@ -184,7 +206,8 @@ const Report_booking = () => {
           '',
           '',
           'ຊ່ວງວັນທີ່',
-          `${formatDate(startDate) || 'ທຸກວັນ'} - ${formatDate(endDate) || 'ທຸກວັນ'}`,
+          '',
+          `${displayStart} - ${displayEnd}`,
         ]);
       }
       if (status) {
@@ -197,10 +220,10 @@ const Report_booking = () => {
           '',
           '',
           'ສະຖານະ',
+          '',
           status,
         ]);
       }
-      // Add status counts
       const statusCounts = getStatusCounts();
       const statusCountRows = [
         [
@@ -212,6 +235,7 @@ const Report_booking = () => {
           '',
           '',
           'ລໍຖ້າການຢືນຢັນ',
+          '',
           `${statusCounts.pending} ລາຍການ`,
         ],
         [
@@ -223,6 +247,7 @@ const Report_booking = () => {
           '',
           '',
           'ຢືນຢັນແລ້ວ',
+          '',
           `${statusCounts.confirmed} ລາຍການ`,
         ],
         [
@@ -234,6 +259,7 @@ const Report_booking = () => {
           '',
           '',
           'ຍົກເລີກ',
+          '',
           `${statusCounts.cancelled} ລາຍການ`,
         ],
         [
@@ -245,11 +271,11 @@ const Report_booking = () => {
           '',
           '',
           'ສຳເລັດ',
+          '',
           `${statusCounts.completed} ລາຍການ`,
         ],
       ];
 
-      // Combine all rows
       const sheetData = [
         headers,
         ...data,
@@ -263,7 +289,6 @@ const Report_booking = () => {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Bookings');
 
-      // Auto-size columns
       const colWidths = headers.map((header, i) => ({
         wch: Math.max(
           header.length,
@@ -277,27 +302,23 @@ const Report_booking = () => {
       }));
       worksheet['!cols'] = colWidths;
 
-      // Generate filename with current date
       const today = new Date();
       const dateStr = `${today.getFullYear()}-${String(
         today.getMonth() + 1
       ).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const fileName = `booking_report_${dateStr}.xlsx`;
 
-      // Export to Excel
       XLSX.writeFile(workbook, fileName);
       toast.success('ສົ່ງອອກຂໍ້ມູນການຈອງເປັນ Excel ສຳເລັດ');
-      console.log('Excel export completed');
     } catch (err) {
       console.error('Export error:', err);
-      toast.error('ເກີດຂໍ້ຜິດພາດໃນການສົ່ງອອກ Excel');
+      toast.error('ເກີດຂໍ້ຜິດພາດໃນການສົງອອກ Excel');
     } finally {
       setExporting(false);
     }
   };
 
   const handleBack = () => {
-    console.log('Navigating to /home');
     navigate('/home');
   };
 
@@ -330,7 +351,7 @@ const Report_booking = () => {
           </button>
         </div>
       </div>
-    
+
       {/* Search Section */}
       <div className="w-full max-w-7xl mt-4 p-6 bg-white rounded-xl shadow-lg">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
@@ -338,22 +359,21 @@ const Report_booking = () => {
         </h2>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <input
-              type="date"
-              value={searchParams.startDate}
-              onChange={(e) =>
-                setSearchParams({ ...searchParams, startDate: e.target.value })
-              }
+            <DatePicker
+              selected={searchParams.startDate}
+              onChange={(date) => setSearchParams({ ...searchParams, startDate: date })}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="ວັນທີເລີ່ມ (ວວ/ດດ/ປປປປ)"
               className="w-[220px] px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               aria-label="ວັນທີ່ເລີ່ມ"
               disabled={loading || exporting}
             />
-            <input
-              type="date"
-              value={searchParams.endDate}
-              onChange={(e) =>
-                setSearchParams({ ...searchParams, endDate: e.target.value })
-              }
+            <span className="text-xl text-black">ຫາ</span>
+            <DatePicker
+              selected={searchParams.endDate}
+              onChange={(date) => setSearchParams({ ...searchParams, endDate: date })}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="ສິ້ນສຸດ (ວວ/ດດ/ປປປປ)"
               className="w-[220px] px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               aria-label="ວັນທີ່ສິ້ນສຸດ"
               disabled={loading || exporting}
@@ -390,9 +410,7 @@ const Report_booking = () => {
                 disabled={
                   loading ||
                   exporting ||
-                  (!searchParams.startDate &&
-                    !searchParams.endDate &&
-                    !searchParams.status)
+                  (!searchParams.startDate && !searchParams.endDate && !searchParams.status)
                 }
               >
                 <X className="w-5 h-5 mr-2" />
@@ -465,24 +483,16 @@ const Report_booking = () => {
                       >
                         <td className="py-3 px-4">{booking.id || '-'}</td>
                         <td className="py-3 px-4">{booking.user_name || '-'}</td>
+                        <td className="py-3 px-4">{booking.user_phone || '-'}</td>
+                        <td className="py-3 px-4">{booking.stadium_dtail || '-'}</td>
                         <td className="py-3 px-4">
-                          {booking.user_phone || '-'}
-                        </td>
-                        <td className="py-3 px-4">
-                          {booking.stadium_dtail || '-'}
-                        </td>
-                        <td className="py-3 px-4">
-                          {formatDate(booking.booking_date, booking.booking_type)}
+                          {formatDisplayDate(booking.booking_date, false, booking.booking_type)}
                         </td>
                         <td className="py-3 px-4">
                           {formatTimeSlot(booking.time_slot, booking.booking_type)}
                         </td>
-                        <td className="py-3 px-4">
-                          {formatCurrency(booking.price)}
-                        </td>
-                        <td className="py-3 px-4">
-                          {booking.username || '-'}
-                        </td>
+                        <td className="py-3 px-4">{formatCurrency(booking.price)}</td>
+                        <td className="py-3 px-4">{booking.username || '-'}</td>
                         <td className="py-3 px-4">
                           {booking.status === 'pending'
                             ? 'ລໍຖ້າ'
@@ -505,10 +515,7 @@ const Report_booking = () => {
                     ))
                   ) : (
                     <tr>
-                      <td
-                        colSpan="10"
-                        className="text-center py-4 text-gray-500"
-                      >
+                      <td colSpan="10" className="text-center py-4 text-gray-500">
                         ບໍ່ມີຂໍ້ມູນການຈອງ
                       </td>
                     </tr>
@@ -527,8 +534,13 @@ const Report_booking = () => {
                 {(searchParams.startDate || searchParams.endDate) && (
                   <p className="text-sm text-gray-600">
                     ຊ່ວງວັນທີ່:{' '}
-                    {formatDate(searchParams.startDate) || 'ທຸກວັນ'} -{' '}
-                    {formatDate(searchParams.endDate) || 'ທຸກວັນ'}
+                    {searchParams.startDate
+                      ? formatSearchDisplayDate(searchParams.startDate)
+                      : 'ທຸກວັນ'}{' '}
+                    -{' '}
+                    {searchParams.endDate
+                      ? formatSearchDisplayDate(searchParams.endDate)
+                      : 'ທຸກວັນ'}
                   </p>
                 )}
                 {searchParams.status && (
@@ -560,7 +572,7 @@ const Report_booking = () => {
                   </p>
                   <p className="text-sm text-red-600">
                     ປະຕິເສດ:{' '}
-                    <span className="text-red-600">
+                    <span className="text-black">
                       {getStatusCounts().cancelled} ລາຍການ
                     </span>
                   </p>

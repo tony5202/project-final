@@ -19,7 +19,7 @@ exports.createCheckIn = async (req, res) => {
 
     // Validate booking exists and is confirmed
     const [booking] = await db.promise().query(
-      'SELECT booking_id, user_id, st_id, booking_date, start_time, status, price, pre_pay FROM Booking WHERE booking_id = ? AND user_id = ? AND st_id = ? AND status = ?',
+      'SELECT booking_id, user_id, st_id, booking_date, start_time, status, price, pre_pay, booking_type FROM Booking WHERE booking_id = ? AND user_id = ? AND st_id = ? AND status = ?',
       [booking_id, user_id, st_id, 'confirmed']
     );
     console.log('ການກວດສອບການຈອງ:', booking);
@@ -27,20 +27,26 @@ exports.createCheckIn = async (req, res) => {
       return res.status(404).json({ msg: 'ບໍ່ພົບການຈອງທີ່ໄດ້ຮັບການຢືນຢັນ ຫຼື ຂໍ້ມູນບໍ່ຖືກຕ້ອງ' });
     }
 
-    // Validate check-in date and time (must be on booking_date and before start_time)
+    // Validate check-in date (must be on booking_date)
     const now = new Date();
     const bookingDate = new Date(booking[0].booking_date);
-    const startTime = new Date(booking[0].start_time);
     const isSameDay =
       now.getFullYear() === bookingDate.getFullYear() &&
       now.getMonth() === bookingDate.getMonth() &&
       now.getDate() === bookingDate.getDate();
-    if (!isSameDay) {
-      return res.status(400).json({ msg: 'ບໍ່ສາມາດແຈ້ງເຂົ້າໄດ້ ເນື່ອງຈາກບໍ່ຢູ່ໃນວັນທີ່ຈອງ' });
+      // ຟັງຊັນເຊັກ ໝົດມື້
+    // if (!isSameDay) {
+    //   return res.status(400).json({ msg: 'ບໍ່ສາມາດແຈ້ງເຂົ້າໄດ້ ເນື່ອງຈາກບໍ່ຢູ່ໃນວັນທີ່ຈອງ' });
+    // }
+
+    // For Football bookings, validate check-in time must be before start_time
+    if (booking[0].booking_type === 'Football') {
+      const startTime = new Date(booking[0].start_time);
+      if (now >= startTime) {
+        return res.status(400).json({ msg: 'ບໍ່ສາມາດແຈ້ງເຂົ້າໄດ້ ເນື່ອງຈາກເລີຍເວລາເລີ່ມຕົ້ນການຈອງ' });
+      }
     }
-    if (now >= startTime) {
-      return res.status(400).json({ msg: 'ບໍ່ສາມາດແຈ້ງເຂົ້າໄດ້ ເນື່ອງຈາກເລີຍເວລາເລີ່ມຕົ້ນການຈອງ' });
-    }
+    // For Event bookings, no time validation is needed as long as it's on the booking date
 
     // Check for duplicate check-in
     const [existingCheckIn] = await db.promise().query('SELECT * FROM CheckIn WHERE book_id = ?', [booking_id]);

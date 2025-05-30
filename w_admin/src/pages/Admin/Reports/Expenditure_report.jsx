@@ -220,15 +220,14 @@ const Expenditure_report = () => {
       
       <div className="p-4 space-y-3 w-full max-w-7xl">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-          <button
-            className="w-full sm:w-auto flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md"
-            onClick={handleBack}
-            aria-label="ຍ້ອນກັຬໜ້າຫຼັກ"
-            disabled={loading || exporting}
+          <h1
+            className="text-3xl font-bold "
+          
+            
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            ຍ້ອນກັຬໜ້າຫຼັກ
-          </button>
+            
+            ລາຍງານລາຍຈ່າຍ ສິນຄ້າ ແລະ ເດີ່ນ
+          </h1>
           <button
             className="w-full sm:w-auto flex items-center justify-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md disabled:bg-green-400 disabled:cursor-not-allowed"
             onClick={exportToExcel}

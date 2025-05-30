@@ -250,8 +250,8 @@ const Icome_stadium = () => {
       {/* Header Section */}
       <header className="w-full max-w-7xl mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <h1 className="text-3xl font-bold text-gray-800">
-            ລາຍງານລາຍຮັບຈາກສະໜາມ
+          <h1 className="text-3xl font-bold">
+            ລາຍງານລາຍຮັບຈາກເດີ່ນ
           </h1>
           <button
             className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-lg shadow-md transition-all duration-300 disabled:bg-green-400 disabled:cursor-not-allowed"

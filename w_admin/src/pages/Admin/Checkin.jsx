@@ -4,6 +4,15 @@ import { CheckCircle, CreditCard, Loader2, ArrowLeft } from "lucide-react";
 import Swal from 'sweetalert2';
 import { useNavigate } from 'react-router-dom';
 
+// Debounce function to delay search execution
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
+
 const Checkin = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
@@ -15,11 +24,11 @@ const Checkin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  // Set default searchDate to current date in YYYY-MM-DD for input type="date"
+  // Set default searchDate to current date in DD/MM/YYYY for display
   const currentDate = new Date();
-  const defaultDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-  const [searchDate, setSearchDate] = useState(defaultDate);
-  const [searchId, setSearchId] = useState(""); // New state for booking ID search
+  const defaultDate = `${String(currentDate.getDate()).padStart(2, '0')}/${String(currentDate.getMonth() + 1).padStart(2, '0')}/${currentDate.getFullYear()}`;
+  const [searchDate] = useState(defaultDate); // Fixed to current date, no setter needed
+  const [searchId, setSearchId] = useState(""); // State for booking ID search
 
   // Format number as LAK currency
   const formatCurrency = (value) => {
@@ -39,17 +48,6 @@ const Checkin = () => {
     return booking.time_slot || 'N/A';
   };
 
-  // Format booking date for display
-  const getDisplayDate = (booking) => {
-    // booking_date is in DD/MM/YYYY format
-    const [day, month, year] = booking.booking_date.split('/');
-    let date = new Date(`${year}-${month}-${day}`);
-    if (booking.booking_type === 'Event') {
-      date.setDate(date.getDate() + 1);
-    }
-    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-  };
-
   // Fetch all confirmed bookings and filter by date and ID
   useEffect(() => {
     const fetchBookings = async () => {
@@ -58,9 +56,9 @@ const Checkin = () => {
         const response = await axios.get("http://localhost:8000/api/bookings/confirmed");
         const bookings = response.data.bookings || [];
         setBookings(bookings);
-        // Convert searchDate (YYYY-MM-DD) to DD/MM/YYYY for filtering
-        const [year, month, day] = searchDate.split('-');
-        const formattedSearchDate = `${day}/${month}/${year}`;
+        // Convert searchDate (DD/MM/YYYY) to filter format
+        const [day, month, year] = searchDate.split('/');
+        const formattedSearchDate = `${year}-${month}-${day}`;
         // Calculate the previous day for Event bookings
         const searchDateObj = new Date(`${year}-${month}-${day}`);
         searchDateObj.setDate(searchDateObj.getDate() - 1);
@@ -69,7 +67,7 @@ const Checkin = () => {
         const filtered = bookings.filter((booking) => {
           const dateMatch = booking.booking_type === 'Event'
             ? booking.booking_date.toLowerCase().includes(previousDay.toLowerCase())
-            : booking.booking_date.toLowerCase().includes(formattedSearchDate.toLowerCase());
+            : booking.booking_date.toLowerCase().includes(searchDate.toLowerCase());
           const idMatch = searchId
             ? String(booking.id).toLowerCase().includes(searchId.toLowerCase())
             : true;
@@ -87,15 +85,10 @@ const Checkin = () => {
     fetchBookings();
   }, [searchDate, searchId]);
 
-  // Handle date search
-  const handleSearch = (e) => {
-    setSearchDate(e.target.value);
-  };
-
-  // Handle ID search
-  const handleIdSearch = (e) => {
-    setSearchId(e.target.value);
-  };
+  // Handle ID search with debounce
+  const handleIdSearch = debounce((value) => {
+    setSearchId(value);
+  }, 400);
 
   // Handle booking selection
   const handleSelectBooking = (booking) => {
@@ -131,8 +124,8 @@ const Checkin = () => {
       const bookings = bookingsResponse.data.bookings || [];
       setBookings(bookings);
       // Reapply date filter
-      const [year, month, day] = searchDate.split('-');
-      const formattedSearchDate = `${day}/${month}/${year}`;
+      const [day, month, year] = searchDate.split('/');
+      const formattedSearchDate = `${year}-${month}-${day}`;
       // Calculate the previous day for Event bookings
       const searchDateObj = new Date(`${year}-${month}-${day}`);
       searchDateObj.setDate(searchDateObj.getDate() - 1);
@@ -141,7 +134,7 @@ const Checkin = () => {
       const filtered = bookings.filter((booking) => {
         const dateMatch = booking.booking_type === 'Event'
           ? booking.booking_date.toLowerCase().includes(previousDay.toLowerCase())
-          : booking.booking_date.toLowerCase().includes(formattedSearchDate.toLowerCase());
+          : booking.booking_date.toLowerCase().includes(searchDate.toLowerCase());
         const idMatch = searchId
           ? String(booking.id).toLowerCase().includes(searchId.toLowerCase())
           : true;
@@ -219,8 +212,8 @@ const Checkin = () => {
       const bookings = bookingsResponse.data.bookings || [];
       setBookings(bookings);
       // Reapply date filter
-      const [year, month, day] = searchDate.split('-');
-      const formattedSearchDate = `${day}/${month}/${year}`;
+      const [day, month, year] = searchDate.split('/');
+      const formattedSearchDate = `${year}-${month}-${day}`;
       // Calculate the previous day for Event bookings
       const searchDateObj = new Date(`${year}-${month}-${day}`);
       searchDateObj.setDate(searchDateObj.getDate() - 1);
@@ -229,7 +222,7 @@ const Checkin = () => {
       const filtered = bookings.filter((booking) => {
         const dateMatch = booking.booking_type === 'Event'
           ? booking.booking_date.toLowerCase().includes(previousDay.toLowerCase())
-          : booking.booking_date.toLowerCase().includes(formattedSearchDate.toLowerCase());
+          : booking.booking_date.toLowerCase().includes(searchDate.toLowerCase());
         const idMatch = searchId
           ? String(booking.id).toLowerCase().includes(searchId.toLowerCase())
           : true;
@@ -291,25 +284,23 @@ const Checkin = () => {
               ຄົ້ນຫາດ້ວຍວັນທີ່ຈອງ
             </label>
             <input
-              type="date"
+              type="text"
               value={searchDate}
-              onChange={handleSearch}
-              className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 font-noto-sans-lao"
-              disabled={loading}
-              aria-label="ເລືອກວັນທີ່ຈອງ"
+              className="w-full p-3 border rounded-lg bg-gray-100 text-gray-800 font-noto-sans-lao cursor-not-allowed"
+              disabled
+              aria-label="ວັນທີ່ຈອງ (ບໍ່ສາມາດແກ້ໄຂໄດ້)"
             />
             <label className="block text-gray-700 font-semibold mt-4 mb-2 font-noto-sans-lao">
               ຄົ້ນຫາດ້ວຍລະຫັດການຈອງ
             </label>
-            <input
-              type="text"
-              value={searchId}
-              onChange={handleIdSearch}
-              placeholder="ປ້ອນລະຫັດການຈອງ..."
-              className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 font-noto-sans-lao"
-              disabled={loading}
-              aria-label="ປ້ອນລະຫັດການຈອງ"
-            />
+             <input
+            type="text"
+            value={searchId}
+            onChange={(e) => setSearchId(e.target.value)}
+            placeholder="ຄົ້ນຫາ ID ການຈອງ..."
+            className="w-full p-2 border-0 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-md text-base"
+            aria-label="ຄົ້ນຫາ ID ການຈອງ"
+          />
           </div>
 
           {/* Bookings Table */}
@@ -334,11 +325,9 @@ const Checkin = () => {
                       <th scope="col" className="p-3 text-left min-w-[150px]">ຜູ້ຈອງ</th>
                       <th scope="col" className="p-3 text-left min-w-[200px]">ສະໜາມ</th>
                       <th scope="col" className="p-3 text-left min-w-[120px]">ເວລາ</th>
-                     
                       <th scope="col" className="p-3 text-left min-w-[100px]">ລາຄາ</th>
                       <th scope="col" className="p-3 text-left min-w-[100px]">ມັດຈຳ</th>
                       <th scope="col" className="p-3 text-left min-w-[150px]">ຍອດທີ່ຕ້ອງຊຳລະ</th>
-                    
                       <th scope="col" className="p-3 text-left min-w-[80px]">ເລືອກ</th>
                     </tr>
                   </thead>
@@ -355,13 +344,11 @@ const Checkin = () => {
                         <td className="p-3 font-noto-sans-lao break-words">{booking.user_name}</td>
                         <td className="p-3 font-noto-sans-lao break-words">{booking.stadium_dtail}</td>
                         <td className="p-3 font-noto-sans-lao">{getTimeSlotDisplay(booking)}</td>
-                      
                         <td className="p-3 font-noto-sans-lao">{formatCurrency(booking.price)}</td>
                         <td className="p-3 font-noto-sans-lao">{formatCurrency(booking.pre_pay)}</td>
                         <td className="p-3 font-noto-sans-lao">
                           {formatCurrency(booking.price - booking.pre_pay)}
                         </td>
-                      
                         <td className="p-3">
                           <input
                             type="radio"

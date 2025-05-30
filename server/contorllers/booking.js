@@ -480,6 +480,8 @@ exports.updateBookingStatus = async (req, res) => {
 };
 exports.getReportBooking = (req, res) => {
   const { startDate, endDate, status } = req.query;
+
+  // Note: startDate and endDate are expected to be shifted back by 1 day by the frontend
   let query = `
     SELECT 
       b.booking_id AS id, 
@@ -503,17 +505,18 @@ exports.getReportBooking = (req, res) => {
     FROM Booking b
     JOIN Stadium s ON b.st_id = s.st_id
     JOIN User u ON b.user_id = u.id
-     JOIN Employee e ON b.emp_id = e.emp_id
+    JOIN Employee e ON b.emp_id = e.emp_id
     WHERE 1=1
   `;
   const queryParams = [];
+
   if (startDate) {
     query += ' AND b.booking_date >= ?';
-    queryParams.push(startDate);
+    queryParams.push(startDate); // Already adjusted to be 1 day earlier
   }
   if (endDate) {
     query += ' AND b.booking_date <= ?';
-    queryParams.push(endDate);
+    queryParams.push(endDate); // Already adjusted to be 1 day earlier
   }
   if (status) {
     query += ' AND b.status = ?';

@@ -15,7 +15,16 @@ const LayOut_icome = () => {
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
-
+//  useEffect(() => {
+//     const user = JSON.parse(localStorage.getItem("user"));
+//     if (!user) {
+//       Toast.fire({
+//         icon: "error",
+//         title: "ກະລຸນາເຂົ້າສູ່ລະບົບ",
+//       });
+//       navigate("/");
+//     }
+//   }, [navigate]);
   return (
     <div className="flex h-screen bg-green-50">
       {/* Main Content */}

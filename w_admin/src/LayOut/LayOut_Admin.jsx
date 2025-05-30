@@ -36,7 +36,7 @@ const LayOut_Admin = () => {
         icon: "error",
         title: "ກະລຸນາເຂົ້າສູ່ລະຬົບ",
       });
-      navigate("/login");
+      navigate("/");
     } else if (user.role !== "admin" && user.role !== "manager") {
       Toast.fire({
         icon: "error",
@@ -110,7 +110,7 @@ console.log(user);
               aria-label="ຈັດການຂໍ້ມູນພັະນັກງານ"
             >
               <UserCog className="w-5 h-5 mr-3" />
-              ຈັດການຂໍ້ມູນພັະນັກງານ
+              ຂໍ້ມູນພັະນັກງານ
             </NavLink>
           )}
 
@@ -126,7 +126,7 @@ console.log(user);
             aria-label="ຈັດການຂໍ້ມູນການຈອງ"
           >
             <Package className="w-5 h-5 mr-3" />
-            ຈັດການຂໍ້ມູນການຈອງ
+            ຂໍ້ມູນການຈອງ
           </NavLink>
 
           <NavLink
@@ -141,7 +141,7 @@ console.log(user);
             aria-label="ຈັດການຂໍ້ຮູນເດີ່ນບານ"
           >
             <Landmark className="w-5 h-5 mr-3" />
-            ຈັດການຂໍ້ມູນເດີ່ນບານ
+            ຂໍ້ມູນເດີ່ນບານ
           </NavLink>
 
           <NavLink
@@ -156,7 +156,7 @@ console.log(user);
             aria-label="ຈັດການຂໍ້ມູນສິນຄ້າ"
           >
             <Pizza className="w-5 h-5 mr-3" />
-            ຈັດການຂໍ້ມູນສິນຄ້າ
+            ຂໍ້ມູນສິນຄ້າ
           </NavLink>
         </nav>
 
@@ -185,7 +185,7 @@ console.log(user);
           >
             <Menu className="w-6 h-6" />
           </button>
-          <span>ແຜງໜ້າປັດ</span>
+          <span>ແຜງໜ້າປັດຈັດການຂໍ້ມູນ</span>
         </header>
 
         {/* Main Section */}

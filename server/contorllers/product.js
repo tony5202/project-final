@@ -272,6 +272,7 @@ exports.getIncomeReport = async (req, res) => {
       LEFT JOIN sale_detail sd ON s.id = sd.sale_id
       LEFT JOIN product p ON sd.product_id = p.id
       LEFT JOIN employee e ON s.emp_id = e.emp_id
+      
     `;
     const queryParams = [];
 
@@ -290,7 +291,7 @@ exports.getIncomeReport = async (req, res) => {
         return res.status(500).json({ msg: 'Error fetching income report' });
       }
 
-      console.log('Query results:', results); // ดีบักผลลัพธ์
+     
 
       const totalIncome = results.reduce((sum, sale) => sum + parseFloat(sale.totalAmount || 0), 0);
 

@@ -39,7 +39,7 @@ const Reports = () => {
         icon: "error",
         title: "ກະລຸນາເຂົ້າສູ່ລະຬົບ",
       });
-      navigate("/login");
+      navigate("/");
     } else if (
       user.role === "admin" &&
       (window.location.pathname === "/report/expenditure" ||

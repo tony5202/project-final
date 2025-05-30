@@ -24,9 +24,9 @@ const Dashboard = () => {
     if (!user) {
       Toast.fire({
         icon: "error",
-        title: "ກະລຸນາເຂົ້າສູ່ລະຬົບ",
+        title: "ກະລຸນາເຂົ້າສູ່ລະບົບ",
       });
-      navigate("/login");
+      navigate("/");
     }
   }, [navigate]);
 
@@ -87,7 +87,7 @@ const Dashboard = () => {
           aria-label="ຈັດການຂໍ້ມູນພຶ້ນຖານ"
         >
           <FolderKanban className="w-8 h-8 sm:w-10 sm:h-10 mr-3 sm:mr-4 text-green-600 hover:text-white transition-colors duration-300" />
-          <span className="font-semibold text-center font-noto-sans-lao">ຈັດການຂໍ້ມູນພຶ້ນຖານ</span>
+          <span className="font-semibold text-center font-noto-sans-lao">ຈັດການຂໍ້ມູນ</span>
         </NavLink>
 
         {/* Check In Navigation Link */}
