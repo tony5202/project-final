@@ -31,18 +31,16 @@ const Report_booking = () => {
     });
   };
 
-  // Format date to DD/MM/YYYY, add 1 day for non-checkin dates, and an extra day for Event bookings
+  // Format date to DD/MM/YYYY, add 1 day for non-checkin dates, and an extra day for event bookings
   const formatDisplayDate = (dateStr, isCheckinDate = false, bookingType = null) => {
     if (!dateStr) return '-';
     try {
       const normalizedDateStr = dateStr.split('T')[0];
       const date = parse(normalizedDateStr, 'yyyy-MM-dd', new Date());
       if (isNaN(date)) return '-';
-      // For checkin_date, display as-is; for others (e.g., booking_date), add 1 day
       let displayDate = isCheckinDate ? date : addDays(date, 1);
-      // Add an extra day for Event bookings (only for booking_date, not checkin_date)
-      if (!isCheckinDate && bookingType === 'Event') {
-        displayDate = addDays(displayDate, 1); // Extra day for Event
+      if (!isCheckinDate && bookingType === 'event') {
+        displayDate = addDays(displayDate, 1);
       }
       return format(displayDate, 'dd/MM/yyyy');
     } catch (error) {
@@ -66,9 +64,9 @@ const Report_booking = () => {
     return format(addDays(date, 1), 'dd/MM/yyyy');
   };
 
-  // Format time slot, return 'ໝົດມື້' for Event bookings
+  // Format time slot, return 'ໝົດມື້' for event bookings
   const formatTimeSlot = (timeSlot, bookingType) => {
-    if (bookingType === 'Event') {
+    if (bookingType === 'event') {
       return 'ໝົດມື້';
     }
     return timeSlot || '-';
@@ -87,14 +85,20 @@ const Report_booking = () => {
   const fetchBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:8000/api/report-booking');
+      const res = await axios.get('http://localhost:8000/api/report-booking', {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      });
       console.log('Fetched bookings:', res.data);
-      const validData = Array.isArray(res.data) ? res.data : [];
+      const validData = Array.isArray(res.data.bookings) ? res.data.bookings : [];
       setBookings(validData);
       setFilteredBookings(validData);
     } catch (err) {
-      console.error('Fetch error:', err);
-      toast.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນການຈອງ');
+      console.error('Fetch error:', err.response ? err.response.data : err.message);
+      toast.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ຮູນການຈອງ');
     } finally {
       setLoading(false);
     }
@@ -112,7 +116,6 @@ const Report_booking = () => {
       return;
     }
 
-    // Adjust dates for query (subtract 1 day)
     const queryStartDate = startDate ? subDays(startDate, 1) : null;
     const queryEndDate = endDate ? subDays(endDate, 1) : null;
 
@@ -124,7 +127,7 @@ const Report_booking = () => {
         const parsedBookingDate = parse(bookingDate, 'yyyy-MM-dd', new Date());
         if (isNaN(parsedBookingDate.getTime())) return false;
 
-        const compareDate = booking.booking_type === 'Event' ? addDays(parsedBookingDate, 1) : parsedBookingDate;
+        const compareDate = booking.booking_type === 'event' ? addDays(parsedBookingDate, 1) : parsedBookingDate;
 
         const start = queryStartDate ? formatDate(queryStartDate) : '1970-01-01';
         const end = queryEndDate ? formatDate(queryEndDate) : '9999-12-31';
@@ -248,7 +251,7 @@ const Report_booking = () => {
           '',
           'ຢືນຢັນແລ້ວ',
           '',
-          `${statusCounts.confirmed} ລາຍການ`,
+          `${statusCounts.confirmed} ລາຍກาນ`,
         ],
         [
           '',
@@ -330,16 +333,16 @@ const Report_booking = () => {
           <button
             className="w-full sm:w-auto flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md"
             onClick={handleBack}
-            aria-label="ຍ້ອນກັຬໜ້າຫຼັກ"
+            aria-label="Previous page"
             disabled={loading || exporting}
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
-            ຍ້ອນກັຬໜ້າຫຼັກ
+            ຖອຍກັບ
           </button>
           <button
             className="w-full sm:w-auto flex items-center justify-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md disabled:bg-green-400 disabled:cursor-not-allowed"
             onClick={exportToExcel}
-            aria-label="ສົ່ງອອກເປັນ Excel"
+            aria-label="Export to Excel"
             disabled={loading || exporting}
           >
             {exporting ? (
@@ -347,7 +350,7 @@ const Report_booking = () => {
             ) : (
               <Download className="w-5 h-5 mr-2" />
             )}
-            {exporting ? 'ກຳລັງສົ່ງອອກ...' : 'ສົ່ງອອກເປັນ Excel'}
+            {exporting ? 'ກາລາງ...' : 'ສັງອອກ Excel'}
           </button>
         </div>
       </div>
@@ -363,19 +366,19 @@ const Report_booking = () => {
               selected={searchParams.startDate}
               onChange={(date) => setSearchParams({ ...searchParams, startDate: date })}
               dateFormat="dd/MM/yyyy"
-              placeholderText="ວັນທີເລີ່ມ (ວວ/ດດ/ປປປປ)"
-              className="w-[220px] px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              aria-label="ວັນທີ່ເລີ່ມ"
+              placeholderText="ວັນທີເລີ່ມ (dd/mm/yyyy)"
+              className="w-[220px] px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+              aria-label="Start date"
               disabled={loading || exporting}
             />
-            <span className="text-xl text-black">ຫາ</span>
+            <span className="text-xl">ຫາ</span>
             <DatePicker
               selected={searchParams.endDate}
               onChange={(date) => setSearchParams({ ...searchParams, endDate: date })}
               dateFormat="dd/MM/yyyy"
-              placeholderText="ສິ້ນສຸດ (ວວ/ດດ/ປປປປ)"
-              className="w-[220px] px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              aria-label="ວັນທີ່ສິ້ນສຸດ"
+              placeholderText="ສິນສຸດ (dd/mm/yyyy)"
+              className="w-[220px] px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+              aria-label="End date"
               disabled={loading || exporting}
             />
             <select
@@ -383,30 +386,30 @@ const Report_booking = () => {
               onChange={(e) =>
                 setSearchParams({ ...searchParams, status: e.target.value })
               }
-              className="w-[220px] px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              aria-label="ສະຖານະ"
+              className="w-[220px] px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+              aria-label="Status"
               disabled={loading || exporting}
             >
               <option value="">ທຸກສະຖານະ</option>
-              <option value="pending">ລໍຖ້າການຢືນຢັນ</option>
-              <option value="confirmed">ຢືນຢັນແລ້ວ</option>
-              <option value="cancelled">ຍົກເລີກ</option>
+              <option value="pending">ລໍຖ້າ</option>
+              <option value="confirmed">ອະນຸມັດ</option>
+              <option value="cancelled">ປະຕິເສດ</option>
               <option value="completed">ສຳເລັດ</option>
             </select>
             <div className="flex gap-2">
               <button
-                className="w-full sm:w-auto flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md disabled:bg-blue-400 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
                 onClick={handleSearch}
-                aria-label="ຄົ້ນຫາ"
+                aria-label="Search"
                 disabled={loading || exporting}
               >
                 <Search className="w-5 h-5 mr-2" />
-                ຄົ້ນຫາ
+                ຄ້ນ
               </button>
               <button
                 className="w-full sm:w-auto flex items-center justify-center bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-all duration-300 shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
                 onClick={handleClear}
-                aria-label="ລ້າງ"
+                aria-label="Clear"
                 disabled={
                   loading ||
                   exporting ||
@@ -422,56 +425,36 @@ const Report_booking = () => {
       </div>
 
       {/* Table Section */}
-      <div className="w-full max-w-7xl mt-10 p-6 bg-white rounded-xl shadow-lg">
+      <div className="w-full max-w-7xl mt-6 p-6 bg-white rounded-xl shadow-lg">
         <h1
           className="text-3xl font-bold text-center mb-8 text-gray-800"
-          id="booking-report-title"
+          id="table-title"
         >
           ລາຍງານການຈອງ
         </h1>
         {loading ? (
           <div className="flex justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table
                 className="min-w-full table-auto text-base"
-                aria-describedby="booking-report-title"
+                aria-describedby="table-title"
               >
                 <thead>
                   <tr className="bg-blue-50 text-gray-700">
-                    <th className="py-3 px-4 text-left font-medium" scope="col">
-                      ລະຫັດການຈອງ
-                    </th>
-                    <th className="py-3 px-4 text-left font-medium" scope="col">
-                      ຜູ້ຈອງ
-                    </th>
-                    <th className="py-3 px-4 text-left font-medium" scope="col">
-                      ເບີໂທ
-                    </th>
-                    <th className="py-3 px-4 text-left font-medium" scope="col">
-                      ເດີ່ນ
-                    </th>
-                    <th className="py-3 px-4 text-left font-medium" scope="col">
-                      ວັນທີ່ຈອງ
-                    </th>
-                    <th className="py-3 px-4 text-left font-medium" scope="col">
-                      ເວລາ
-                    </th>
-                    <th className="py-3 px-4 text-left font-medium" scope="col">
-                      ລາຄາ
-                    </th>
-                    <th className="py-3 px-4 text-left font-medium" scope="col">
-                      ພະນັກງານຈັດການ
-                    </th>
-                    <th className="py-3 px-4 text-left font-medium" scope="col">
-                      ສະຖານະ
-                    </th>
-                    <th className="py-3 px-4 text-left font-medium" scope="col">
-                      ປະເພດການຈອງ
-                    </th>
+                    <th className="py-3 px-4 text-center font-medium">ລະຫັດ</th>
+                    <th className="py-3 px-4 text-center font-medium">ຜູ້ຈອງ</th>
+                    <th className="py-3 px-4 text-center font-medium">ເບີ</th>
+                    <th className="py-3 px-4 text-center font-medium">ສະ</th>
+                    <th className="py-3 px-4 text-center font-medium">วันที่</th>
+                    <th className="py-3 px-4 text-center font-medium">เวลา</th>
+                    <th className="py-3 px-4 text-center font-medium">ราคา</th>
+                    <th className="py-3 px-4 text-center font-medium">พนักงาน</th>
+                    <th className="py-3 px-4 text-center font-medium">สถานะ</th>
+                    <th className="py-3 px-4 text-center font-medium">ประเภท</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -481,34 +464,34 @@ const Report_booking = () => {
                         key={booking.id}
                         className="border-t hover:bg-gray-50 transition-all"
                       >
-                        <td className="py-3 px-4">{booking.id || '-'}</td>
-                        <td className="py-3 px-4">{booking.user_name || '-'}</td>
-                        <td className="py-3 px-4">{booking.user_phone || '-'}</td>
-                        <td className="py-3 px-4">{booking.stadium_dtail || '-'}</td>
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 text-center">{booking.id || '-'}</td>
+                        <td className="py-3 px-4 text-center">{booking.user_name || '-'}</td>
+                        <td className="py-3 px-4 text-center">{booking.user_phone || '-'}</td>
+                        <td className="py-3 px-4 text-center">{booking.stadium_dtail || '-'}</td>
+                        <td className="py-3 px-4 text-center">
                           {formatDisplayDate(booking.booking_date, false, booking.booking_type)}
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 text-center">
                           {formatTimeSlot(booking.time_slot, booking.booking_type)}
                         </td>
-                        <td className="py-3 px-4">{formatCurrency(booking.price)}</td>
-                        <td className="py-3 px-4">{booking.username || '-'}</td>
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 text-center">{formatCurrency(booking.price)}</td>
+                        <td className="py-3 px-4 text-center">{booking.employee_username || '-'}</td>
+                        <td className="py-3 px-4 text-center">
                           {booking.status === 'pending'
                             ? 'ລໍຖ້າ'
                             : booking.status === 'confirmed'
-                            ? 'ອະນຸມັດ'
+                            ? 'ອະນຸ'
                             : booking.status === 'cancelled'
-                            ? 'ປະຕິເສດ'
+                            ? 'ປະ'
                             : booking.status === 'completed'
-                            ? 'ສຳເລັດ'
+                            ? 'ສຳ'
                             : '-'}
                         </td>
-                        <td className="py-3 px-4">
-                          {booking.booking_type === 'Football'
-                            ? 'ເຕະບານ'
-                            : booking.booking_type === 'Event'
-                            ? 'ກິດຈະກຳ'
+                        <td className="py-3 px-4 text-center">
+                          {booking.booking_type === 'football'
+                            ? 'ຟຸ'
+                            : booking.booking_type === 'event'
+                            ? 'ກິດ'
                             : '-'}
                         </td>
                       </tr>
@@ -526,61 +509,46 @@ const Report_booking = () => {
             {filteredBookings.length > 0 && (
               <div className="mt-6 text-right">
                 <p className="text-lg font-semibold text-gray-800">
-                  ຈຳນວນການຈອງທັງໝົດ:{' '}
-                  <span className="text-black font-bold">
-                    {filteredBookings.length} ລາຍການ
-                  </span>
+                  ຈຳນວນທັງໝົດ: <span className="text-black">{filteredBookings.length} ລາຍ</span>
                 </p>
                 {(searchParams.startDate || searchParams.endDate) && (
                   <p className="text-sm text-gray-600">
-                    ຊ່ວງວັນທີ່:{' '}
+                    วันที่:{' '}
                     {searchParams.startDate
                       ? formatSearchDisplayDate(searchParams.startDate)
-                      : 'ທຸກວັນ'}{' '}
+                      : 'ทุกวัน'}{' '}
                     -{' '}
                     {searchParams.endDate
                       ? formatSearchDisplayDate(searchParams.endDate)
-                      : 'ທຸກວັນ'}
+                      : 'ทุกวัน'}
                   </p>
                 )}
                 {searchParams.status && (
                   <p className="text-sm text-gray-600">
-                    ສະຖານະ:{' '}
+                    สถานะ:{' '}
                     {searchParams.status === 'pending'
-                      ? 'ລໍຖ້າການຢືນຢັນ'
+                      ? 'ລໍຖ້າ'
                       : searchParams.status === 'confirmed'
-                      ? 'ຢືນຢັນແລ້ວ'
+                      ? 'ອະນຸ'
                       : searchParams.status === 'cancelled'
-                      ? 'ຍົກເລີກ'
+                      ? 'ປະ'
                       : searchParams.status === 'completed'
-                      ? 'ສຳເລັດ'
+                      ? 'ສຳ'
                       : '-'}
                   </p>
                 )}
                 <div className="mt-2">
-                  <p className="text-sm text-yellow-500">
-                    ລໍຖ້າ:{' '}
-                    <span className="text-black">
-                      {getStatusCounts().pending} ລາຍການ
-                    </span>
+                  <p className="text-sm text-yellow-600">
+                    ລໍຖ້າ: <span className="text-black">{getStatusCounts().pending} ລາຍ</span>
                   </p>
                   <p className="text-sm text-green-600">
-                    ອະນຸມັດ:{' '}
-                    <span className="text-black">
-                      {getStatusCounts().confirmed} ລາຍການ
-                    </span>
+                    ອະນຸ: <span className="text-black">{getStatusCounts().confirmed} ລາຍ</span>
                   </p>
                   <p className="text-sm text-red-600">
-                    ປະຕິເສດ:{' '}
-                    <span className="text-black">
-                      {getStatusCounts().cancelled} ລາຍການ
-                    </span>
+                    ປະ: <span className="text-black">{getStatusCounts().cancelled} ລາຍ</span>
                   </p>
                   <p className="text-sm text-blue-600">
-                    ສຳເລັດ ຫຼື ແຈ້ງເຂົ້າ:{' '}
-                    <span className="text-black">
-                      {getStatusCounts().completed} ລາຍການ
-                    </span>
+                    ສຳ: <span className="text-black">{getStatusCounts().completed} ລາຍ</span>
                   </p>
                 </div>
               </div>

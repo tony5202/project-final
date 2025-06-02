@@ -39,24 +39,43 @@ const Product = () => {
     setImage(e.target.files[0]);
   };
 
-  const fetchProducts = () => {
+  const fetchProducts = async () => {
     setLoading(true);
-    axios.get('http://localhost:8000/api/product')
-      .then((res) => {
-        const validData = Array.isArray(res.data) ? res.data : [];
-        setProducts(validData);
-      })
-      .catch((err) => {
-        setError('Error fetching products');
-        toast.error('Error fetching products');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    try {
+      const res = await axios.get('http://localhost:8000/api/product');
+      const validData = Array.isArray(res.data) ? res.data : [];
+      setProducts(validData);
+    } catch (err) {
+      console.error('Fetch products failed:', err);
+      setError('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນສິນຄ້າ');
+      toast.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນສິນຄ້າ');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validate inputs
+    if (!formData.name || !formData.category || !formData.price || !formData.quantity) {
+      toast.error('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນ');
+      return;
+    }
+    const price = parseFloat(formData.price);
+    if (isNaN(price) || price <= 0) {
+      toast.error('ລາຄາຕ້ອງຫຼາຍກວ່າ 0');
+      return;
+    }
+    const quantity = Number(formData.quantity);
+    if (!Number.isInteger(quantity) || quantity < (editingProduct ? 0 : 1)) {
+      toast.error(`ຈຳນວນຕ້ອງເປັນຈຳນວນເຕັມ${editingProduct ? 'ທີ່ບໍ່ຕິດລົບ' : 'ບວກ'}`);
+      return;
+    }
+    if (!editingProduct && !image) {
+      toast.error('ກະລຸນາອັບໂຫຼດຮູບພາບ');
+      return;
+    }
+
     const data = new FormData();
     data.append('name', formData.name);
     data.append('category', formData.category);
@@ -69,12 +88,12 @@ const Product = () => {
         await axios.put(`http://localhost:8000/api/product/${editingProduct.id}`, data, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        toast.success('ແກແກ້ໄຂສິນຄ້າ!');
+        toast.success('ແກ້ໄຂສິນຄ້າແລະບັນທຶກລາຍຈ່າຍສຳເລັດ!');
       } else {
         await axios.post('http://localhost:8000/api/product', data, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        toast.success('ເສິນຄ້າໃໝ່!');
+        toast.success('ເພີ່ມສິນຄ້າແລະບັນທຶກລາຍຈ່າຍສຳເລັດ!');
       }
 
       fetchProducts();
@@ -82,8 +101,9 @@ const Product = () => {
       setImage(null);
       setEditingProduct(null);
     } catch (err) {
-      console.error('Upload failed:', err);
-      toast.error('Failed to submit product');
+      console.error('Submit failed:', err);
+      const msg = err.response?.data?.msg || 'ບໍ່ສາມາດບັນທຶກສິນຄ້າໄດ້';
+      toast.error(msg);
     }
   };
 
@@ -113,10 +133,11 @@ const Product = () => {
     if (result.isConfirmed) {
       try {
         await axios.delete(`http://localhost:8000/api/product/${id}`);
-        toast.success('ສິນຄ້າຖືກລົບແລ້ວ!');
+        toast.success('ສິນຄ້າຖືກລົບສຳເລັດ!');
         fetchProducts();
       } catch (err) {
-        toast.error('Failed to delete');
+        console.error('Delete failed:', err);
+        toast.error('ບໍ່ສາມາດລົບສິນຄ້າໄດ້');
       }
     }
   };
@@ -129,57 +150,74 @@ const Product = () => {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <input
-            type="text"
-            name="name"
-            placeholder="ຊື່ ສິນຄ້າ"
-            className="w-full px-4 py-3 border rounded-md focus:outline-none"
-            onChange={handleChange}
-            value={formData.name}
-            required
-          />
-          <select
-            name="category"
-            className="w-full px-4 py-3 border rounded-md focus:outline-none"
-            onChange={handleChange}
-            value={formData.category}
-            required
-          >
-            <option value="" disabled>ເລືອກປະເພດສິນຄ້າ</option>
-            <option value="ນ້ຳດື່ມ">ນ້ຳດື່ມ</option>
-            <option value="ນ້ຳອັດລົມ">ນ້ຳອັດລົມ</option>
-            <option value="ເຄື່ອງດື່ມຊູກຳລັງ">ເຄື່ອງດື່ມຊູກຳລັງ</option>
-            <option value="ເຄື່ອງດື່ມແອວກໍຮໍ">ເຄື່ອງດື່ມແອວກໍຮໍ</option>
-            <option value="ເຄື່ອງດື່ມແຮ່ທາດ">ເຄື່ອງດື່ມແຮ່ທາດ</option>
-            <option value="ຂອງຫວານ">ຂອງຫວານ</option>
-            <option value="ອາຫານຫວ່າງ">ອາຫານຫວ່າງ</option>
-           
-          </select>
-          <input
-            type="number"
-            name="price"
-            placeholder="ລາຄາ"
-            className="w-full px-4 py-3 border rounded-md"
-            onChange={handleChange}
-            value={formData.price}
-            required
-          />
-          <input
-            type="number"
-            name="quantity"
-            placeholder="ຈຳນວນ"
-            className="w-full px-4 py-3 border rounded-md"
-            onChange={handleChange}
-            value={formData.quantity}
-            required
-          />
-          <input
-            type="file"
-            accept="image/*"
-            className="w-full py-3 text-lg"
-            onChange={handleFileChange}
-            required={!editingProduct}
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ຊື່ສິນຄ້າ</label>
+            <input
+              type="text"
+              name="name"
+              placeholder="ຊື່ ສິນຄ້າ"
+              className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={handleChange}
+              value={formData.name}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ປະເພດສິນຄ້າ</label>
+            <select
+              name="category"
+              className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={handleChange}
+              value={formData.category}
+              required
+            >
+              <option value="" disabled>ເລືອກປະເພດສິນຄ້າ</option>
+              <option value="ນ້ຳດື່ມ">ນ້ຳດື່ມ</option>
+              <option value="ນ້ຳອັດລົມ">ນ້ຳອັດລົມ</option>
+              <option value="ເຄື່ອງດື່ມຊູກຳລັງ">ເຄື່ອງດື່ມຊູກຳລັງ</option>
+              <option value="ເຄື່ອງດື່ມແອວກໍຮໍ">ເຄື່ອງດື່ມແອວກໍຮໍ</option>
+              <option value="ເຄື່ອງດື່ມແຮ່ທາດ">ເຄື່ອງດື່ມແຮ່ທາດ</option>
+              <option value="ຂອງຫວານ">ຂອງຫວານ</option>
+              <option value="ອາຫານຫວ່າງ">ອາຫານຫວ່າງ</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ລາຄາ</label>
+            <input
+              type="number"
+              name="price"
+              placeholder="ລາຄາ"
+              className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={handleChange}
+              value={formData.price}
+              required
+              step="0.01"
+              min="0.01"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ຈຳນວນ</label>
+            <input
+              type="number"
+              name="quantity"
+              placeholder="ຈຳນວນ"
+              className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={handleChange}
+              value={formData.quantity}
+              required
+              min={editingProduct ? "0" : "1"}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ຮູບພາບສິນຄ້າ</label>
+            <input
+              type="file"
+              accept="image/*"
+              className="w-full py-3 text-lg"
+              onChange={handleFileChange}
+              required={!editingProduct}
+            />
+          </div>
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition duration-300 text-xl"
@@ -192,9 +230,9 @@ const Product = () => {
       <div className="w-full max-w-7xl mt-10 p-6 bg-white rounded-lg shadow-md">
         <h1 className="text-4xl font-semibold text-center mb-8">ຂໍ້ມູນສິນຄ້າ</h1>
         {loading ? (
-          <p className="text-center text-gray-500 text-xl">Loading...</p>
+          <p className="text-center text-gray-500 text-xl">ກຳລັງໂຫລດ...</p>
         ) : error ? (
-          <p className="text-center text-red-500 text-xl">{error}</p>
+          <p className="text-center text-red-600 text-xl">{error}</p>
         ) : (
           <table className="min-w-full table-auto text-lg">
             <thead>
@@ -204,13 +242,13 @@ const Product = () => {
                 <th className="py-3 px-6 text-left">ລາຄາ</th>
                 <th className="py-3 px-6 text-left">ຈຳນວນ</th>
                 <th className="py-3 px-6 text-left">ຮູບສິນຄ້າ</th>
-                <th className="py-3 px-6 text-left">ເຫດການ</th>
+                <th className="py-3 px-6 text-center">ເຫດການ</th>
               </tr>
             </thead>
             <tbody>
               {products.length > 0 ? (
                 products.map((item, index) => (
-                  <tr key={item.id || index} className="border-t hover:bg-gray-50">
+                  <tr key={item.id || index} className="border-t border-gray-200 hover:bg-gray-50">
                     <td className="py-3 px-6">{item.name}</td>
                     <td className="py-3 px-6">{item.category}</td>
                     <td className="py-3 px-6">{formatCurrency(item.price)}</td>
@@ -222,16 +260,16 @@ const Product = () => {
                         <div className="w-20 h-20 bg-gray-200 flex items-center justify-center">ບໍ່ມີຮູບ</div>
                       )}
                     </td>
-                    <td className="py-3 px-6">
+                    <td className="py-3 px-6 text-center">
                       <button
                         onClick={() => handleEdit(item)}
-                        className="bg-yellow-500 text-white px-4 py-2 rounded-md mr-2"
+                        className="bg-yellow-600 text-white px-4 py-2 rounded-md mr-2 hover:bg-yellow-700 transition duration-300"
                       >
-                        ແກ້ໄຂສິນຄ້າ
+                        ແກ້ໄຂ
                       </button>
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="bg-red-500 text-white px-4 py-2 rounded-md"
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition duration-300"
                       >
                         ລົບ
                       </button>
@@ -239,14 +277,27 @@ const Product = () => {
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan="6" className="text-center py-4">ບໍ່ມີສິນຄ້າ</td></tr>
+                <tr>
+                  <td colSpan="6" className="text-center py-4">ບໍ່ມີສິນຄ້າ</td>
+                </tr>
               )}
             </tbody>
           </table>
         )}
       </div>
 
-      <ToastContainer />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
     </div>
   );
 };

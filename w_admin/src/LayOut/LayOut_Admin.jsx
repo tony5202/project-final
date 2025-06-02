@@ -109,13 +109,13 @@ console.log(user);
               }
               aria-label="ຈັດການຂໍ້ມູນພັະນັກງານ"
             >
-              <UserCog className="w-5 h-5 mr-3" />
-              ຂໍ້ມູນພັະນັກງານ
+              <Package className="w-5 h-5 mr-3" />
+                 ຂໍ້ມູນການຈອງ 
             </NavLink>
           )}
 
           <NavLink
-            to="booking"
+            to="employee"
             className={({ isActive }) =>
               `flex items-center px-4 py-3 rounded-lg transition-all font-noto-sans-lao ${
                 isActive
@@ -125,8 +125,8 @@ console.log(user);
             }
             aria-label="ຈັດການຂໍ້ມູນການຈອງ"
           >
-            <Package className="w-5 h-5 mr-3" />
-            ຂໍ້ມູນການຈອງ
+            <UserCog className="w-5 h-5 mr-3" />
+        ຂໍ້ມູນພັະນັກງານ
           </NavLink>
 
           <NavLink

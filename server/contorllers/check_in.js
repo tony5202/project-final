@@ -11,15 +11,15 @@ exports.createCheckIn = async (req, res) => {
     }
 
     // Validate user and stadium
-    const [user] = await db.promise().query('SELECT id FROM User WHERE id = ?', [user_id]);
-    const [stadium] = await db.promise().query('SELECT st_id FROM Stadium WHERE st_id = ?', [st_id]);
+    const [user] = await db.promise().query('SELECT id FROM user WHERE id = ?', [user_id]);
+    const [stadium] = await db.promise().query('SELECT st_id FROM stadium WHERE st_id = ?', [st_id]);
     if (!user.length || !stadium.length) {
       return res.status(404).json({ msg: 'ບໍ່ພົບຜູ້ໃຊ້ ຫຼື ສະໜາມ' });
     }
 
     // Validate booking exists and is confirmed
     const [booking] = await db.promise().query(
-      'SELECT booking_id, user_id, st_id, booking_date, start_time, status, price, pre_pay, booking_type FROM Booking WHERE booking_id = ? AND user_id = ? AND st_id = ? AND status = ?',
+      'SELECT booking_id, user_id, st_id, booking_date, start_time, status, price, pre_pay, booking_type FROM booking WHERE booking_id = ? AND user_id = ? AND st_id = ? AND status = ?',
       [booking_id, user_id, st_id, 'confirmed']
     );
     console.log('ການກວດສອບການຈອງ:', booking);
@@ -40,7 +40,7 @@ exports.createCheckIn = async (req, res) => {
     // }
 
     // For Football bookings, validate check-in time must be before start_time
-    if (booking[0].booking_type === 'Football') {
+    if (booking[0].booking_type === 'football') {
       const startTime = new Date(booking[0].start_time);
       if (now >= startTime) {
         return res.status(400).json({ msg: 'ບໍ່ສາມາດແຈ້ງເຂົ້າໄດ້ ເນື່ອງຈາກເລີຍເວລາເລີ່ມຕົ້ນການຈອງ' });
@@ -49,14 +49,14 @@ exports.createCheckIn = async (req, res) => {
     // For Event bookings, no time validation is needed as long as it's on the booking date
 
     // Check for duplicate check-in
-    const [existingCheckIn] = await db.promise().query('SELECT * FROM CheckIn WHERE book_id = ?', [booking_id]);
+    const [existingCheckIn] = await db.promise().query('SELECT * FROM checkin WHERE book_id = ?', [booking_id]);
     console.log('ການແຈ້ງເຂົ້າທີ່ມີຢູ່:', existingCheckIn);
     if (existingCheckIn.length) {
       return res.status(400).json({ msg: 'ການຈອງນີ້ໄດ້ແຈ້ງເຂົ້າແລ້ວ' });
     }
 
     // Insert check-in record
-    const query = 'INSERT INTO CheckIn (book_id, st_id, checkin_date) VALUES (?, ?, ?)';
+    const query = 'INSERT INTO checkin (book_id, st_id, checkin_date) VALUES (?, ?, ?)';
     const values = [booking_id, st_id, now];
     const [result] = await db.promise().query(query, values);
 
@@ -82,7 +82,7 @@ exports.confirmCheckIn = async (req, res) => {
     }
 
     // Check if check-in exists
-    const [checkIn] = await db.promise().query('SELECT * FROM CheckIn WHERE id = ?', [id]);
+    const [checkIn] = await db.promise().query('SELECT * FROM checkin WHERE id = ?', [id]);
     console.log('ບັນທຶກການແຈ້ງເຂົ້າ:', checkIn);
     if (!checkIn.length) {
       return res.status(404).json({ msg: 'ບໍ່ພົບຂໍ້ມູນການແຈ້ງເຂົ້າ' });
@@ -91,14 +91,17 @@ exports.confirmCheckIn = async (req, res) => {
     const booking_id = checkIn[0].book_id;
 
     // Check if booking exists and is confirmed
-    const [booking] = await db.promise().query('SELECT * FROM Booking WHERE booking_id = ? AND status = ?', [booking_id, 'confirmed']);
+    const [booking] = await db.promise().query('SELECT * FROM booking WHERE booking_id = ? AND status = ?', [
+      booking_id,
+      'confirmed',
+    ]);
     console.log('ການຈອງສຳລັບການຢືນຢັນ:', booking);
     if (!booking.length) {
       return res.status(404).json({ msg: 'ບໍ່ພົບການຈອງທີ່ໄດ້ຮັບການຢືນຢັນ' });
     }
 
     // Update booking status to completed
-    const updateQuery = 'UPDATE Booking SET status = ? WHERE booking_id = ?';
+    const updateQuery = 'UPDATE booking SET status = ? WHERE booking_id = ?';
     await db.promise().query(updateQuery, ['completed', booking_id]);
 
     // Fetch updated booking
@@ -119,9 +122,9 @@ exports.confirmCheckIn = async (req, res) => {
          b.booking_date,
          s.dtail AS stadium_dtail, 
          u.name AS user_name
-       FROM Booking b
-       JOIN Stadium s ON b.st_id = s.st_id
-       JOIN User u ON b.user_id = u.id
+       FROM booking b
+       JOIN stadium s ON b.st_id = s.st_id
+       JOIN user u ON b.user_id = u.id
        WHERE b.booking_id = ?`,
       [booking_id]
     );
@@ -145,8 +148,8 @@ exports.confirmCheckIn = async (req, res) => {
           ? `${req.protocol}://${req.get('host')}/slip_payment/${updatedBooking[0].slip_payment}`
           : null,
         booking_type: updatedBooking[0].booking_type,
-        booking_date: updatedBooking[0].booking_date
-      }
+        booking_date: updatedBooking[0].booking_date,
+      },
     });
   } catch (error) {
     console.error('ເກີດຂໍ້ຜິດພາດໃນການຢືນຢັນການແຈ້ງເຂົ້າ:', error.message, error.stack);
@@ -175,10 +178,10 @@ exports.getAllConfirmedBookings = async (req, res) => {
         s.dtail AS stadium_dtail, 
         u.name AS user_name,
         c.id AS checkin_id
-      FROM Booking b
-      JOIN Stadium s ON b.st_id = s.st_id
-      JOIN User u ON b.user_id = u.id
-      LEFT JOIN CheckIn c ON b.booking_id = c.book_id
+      FROM booking b
+      JOIN stadium s ON b.st_id = s.st_id
+      JOIN user u ON b.user_id = u.id
+      LEFT JOIN checkin c ON b.booking_id = c.book_id
       WHERE b.status = 'confirmed'
       ORDER BY b.start_time ASC
     `;
@@ -191,7 +194,7 @@ exports.getAllConfirmedBookings = async (req, res) => {
 
     return res.status(200).json({
       msg: 'ດຶງຂໍ້ມູນການຈອງທີ່ຢືນຢັນສຳເລັດ',
-      bookings: bookings.map(booking => ({
+      bookings: bookings.map((booking) => ({
         id: booking.id,
         user_id: booking.user_id,
         user_name: booking.user_name,
@@ -209,8 +212,8 @@ exports.getAllConfirmedBookings = async (req, res) => {
           : null,
         booking_type: booking.booking_type,
         booking_date: booking.booking_date,
-        checkin_id: booking.checkin_id || null
-      }))
+        checkin_id: booking.checkin_id || null,
+      })),
     });
   } catch (error) {
     console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງການຈອງທີ່ຢືນຢັນ:', error.message, error.stack);
@@ -231,7 +234,7 @@ exports.savePayment = async (req, res) => {
 
     // Validate booking exists and is confirmed
     const [booking] = await db.promise().query(
-      'SELECT booking_id, status, price, pre_pay FROM Booking WHERE booking_id = ? AND status = ?',
+      'SELECT booking_id, status, price, pre_pay FROM booking WHERE booking_id = ? AND status = ?',
       [booking_id, 'confirmed']
     );
     console.log('ການຈອງສຳລັບການຊຳລະ:', booking);
@@ -248,21 +251,20 @@ exports.savePayment = async (req, res) => {
     }
 
     // Update post_pay in Booking
-    const updateQuery = 'UPDATE Booking SET post_pay = ? WHERE booking_id = ?';
+    const updateQuery = 'UPDATE booking SET post_pay = ? WHERE booking_id = ?';
     await db.promise().query(updateQuery, [post_pay, booking_id]);
     console.log('ອັບເດດການຊຳລະ:', { booking_id, post_pay });
 
     return res.status(200).json({
       msg: 'ບັນທຶກການຊຳລະເງິນສຳເລັດ',
       booking_id,
-      post_pay: Number(post_pay)
+      post_pay: Number(post_pay),
     });
   } catch (error) {
     console.error('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການຊຳລະເງິນ:', error.message, error.stack);
     return res.status(500).json({ msg: 'ຂໍ້ຜິດພາດຂອງເຊີບເວີ', error: error.message });
   }
 };
-
 
 // Get all check-in records
 exports.getAllCheckIns = async (req, res) => {
@@ -279,11 +281,12 @@ exports.getAllCheckIns = async (req, res) => {
         s.price AS stadium_price,
         s.price2 AS stadium_price2,
         s.image AS stadium_image,
-        u.name AS user_name
-      FROM CheckIn c
-      JOIN Booking b ON c.book_id = b.booking_id
-      JOIN Stadium s ON c.st_id = s.st_id
-      JOIN User u ON b.user_id = u.id
+        u.name AS user_name,
+        u.phone AS user_phone
+        FROM checkin c
+      JOIN booking b ON c.book_id = b.booking_id
+      JOIN stadium s ON c.st_id = s.st_id
+      JOIN user u ON b.user_id = u.id
       ORDER BY c.checkin_date DESC
     `;
     const [checkins] = await db.promise().query(query);
@@ -295,7 +298,7 @@ exports.getAllCheckIns = async (req, res) => {
 
     return res.status(200).json({
       msg: 'ດຶງຂໍ້ມູນການແຈ້ງເຂົ້າສຳເລັດ',
-      checkins: checkins.map(checkin => ({
+      checkins: checkins.map((checkin) => ({
         checkin_id: checkin.checkin_id,
         book_id: checkin.book_id,
         st_id: checkin.st_id,
@@ -306,10 +309,11 @@ exports.getAllCheckIns = async (req, res) => {
           ? `${req.protocol}://${req.get('host')}/images/${checkin.stadium_image}`
           : null,
         user_name: checkin.user_name,
+        user_phone: checkin.user_phone,
         checkin_date: checkin.checkin_date,
         booking_date: checkin.booking_date,
-        status: checkin.status
-      }))
+        status: checkin.status,
+      })),
     });
   } catch (error) {
     console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນການແຈ້ງເຂົ້າ:', error.message, error.stack);

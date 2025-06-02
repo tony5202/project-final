@@ -42,8 +42,8 @@ const Checkin = () => {
 
   // Format time slot for display
   const getTimeSlotDisplay = (booking) => {
-    if (booking.booking_type === 'Event') {
-      return 'ໝົດມື້';
+    if (booking.booking_type === 'event') {
+      return 'ໝົດມື';
     }
     return booking.time_slot || 'N/A';
   };
@@ -65,7 +65,7 @@ const Checkin = () => {
         const previousDay = `${String(searchDateObj.getDate()).padStart(2, '0')}/${String(searchDateObj.getMonth() + 1).padStart(2, '0')}/${searchDateObj.getFullYear()}`;
         // Filter bookings by date and ID
         const filtered = bookings.filter((booking) => {
-          const dateMatch = booking.booking_type === 'Event'
+          const dateMatch = booking.booking_type === 'event'
             ? booking.booking_date.toLowerCase().includes(previousDay.toLowerCase())
             : booking.booking_date.toLowerCase().includes(searchDate.toLowerCase());
           const idMatch = searchId
@@ -77,7 +77,7 @@ const Checkin = () => {
         setError("");
       } catch (err) {
         console.error('Error fetching bookings:', err);
-        setError(err.response?.data?.msg || "ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນການຈອງ");
+        setError(err.response?.data?.msg || "ເກີດຂໍ້ຜິດພາມໃນການດຶງຂໍ້ມູນການຈອງ");
       } finally {
         setLoading(false);
       }
@@ -132,7 +132,7 @@ const Checkin = () => {
       const previousDay = `${String(searchDateObj.getDate()).padStart(2, '0')}/${String(searchDateObj.getMonth() + 1).padStart(2, '0')}/${searchDateObj.getFullYear()}`;
       // Filter bookings
       const filtered = bookings.filter((booking) => {
-        const dateMatch = booking.booking_type === 'Event'
+        const dateMatch = booking.booking_type === 'event'
           ? booking.booking_date.toLowerCase().includes(previousDay.toLowerCase())
           : booking.booking_date.toLowerCase().includes(searchDate.toLowerCase());
         const idMatch = searchId
@@ -220,7 +220,7 @@ const Checkin = () => {
       const previousDay = `${String(searchDateObj.getDate()).padStart(2, '0')}/${String(searchDateObj.getMonth() + 1).padStart(2, '0')}/${searchDateObj.getFullYear()}`;
       // Filter bookings
       const filtered = bookings.filter((booking) => {
-        const dateMatch = booking.booking_type === 'Event'
+        const dateMatch = booking.booking_type === 'event'
           ? booking.booking_date.toLowerCase().includes(previousDay.toLowerCase())
           : booking.booking_date.toLowerCase().includes(searchDate.toLowerCase());
         const idMatch = searchId
@@ -293,14 +293,13 @@ const Checkin = () => {
             <label className="block text-gray-700 font-semibold mt-4 mb-2 font-noto-sans-lao">
               ຄົ້ນຫາດ້ວຍລະຫັດການຈອງ
             </label>
-             <input
-            type="text"
-            value={searchId}
-            onChange={(e) => setSearchId(e.target.value)}
-            placeholder="ຄົ້ນຫາ ID ການຈອງ..."
-            className="w-full p-2 border-0 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-md text-base"
-            aria-label="ຄົ້ນຫາ ID ການຈອງ"
-          />
+            <input
+              type="text"
+              onChange={(e) => handleIdSearch(e.target.value)}
+              placeholder="ປ້ອນລະຫັດການຈອງ..."
+              className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 font-noto-sans-lao"
+              aria-label="ປ້ອນລະຫັດການຈອງ"
+            />
           </div>
 
           {/* Bookings Table */}

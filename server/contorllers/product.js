@@ -1,34 +1,161 @@
-// controllers/product.js
+
 const path = require('path');
 const db = require('../config/connect_DB');
 
 // ฟังก์ชันเพิ่มสินค้า
-// ฟังก์ชันเพิ่มสินค้า
 exports.product = async (req, res) => {
   try {
-    const { name, category, price, quantity } = req.body; // เพิ่ม quantity
-    const image = req.file.filename;
+    const { name, category, price, quantity } = req.body;
+    const image = req.file?.filename;
 
-    db.query(
-      'INSERT INTO product (name, category, image, price, quantity) VALUES (?, ?, ?, ?, ?)',
-      [name, category, image, price, quantity],
-      (error, results) => {
-        if (error) {
-          console.error('Error inserting product:', error.message);
-          return res.status(500).json({ msg: 'Error inserting product' });
-        }
-        console.log('Product inserted successfully:', results);
-        return res.status(200).json({ msg: 'Insert product success' });
+    // Validate inputs
+    if (!name || !category || !price || !quantity || !image) {
+      return res.status(400).json({ msg: 'Missing required fields' });
+    }
+    if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      return res.status(400).json({ msg: 'Invalid price: must be a positive number' });
+    }
+    if (!Number.isInteger(Number(quantity)) || Number(quantity) <= 0) {
+      return res.status(400).json({ msg: 'Invalid quantity: must be a positive integer' });
+    }
+
+    db.beginTransaction(async (err) => {
+      try {
+        // Insert product
+        const [productResult] = await db.promise().query(
+          'INSERT INTO product (name, category, image, price, quantity) VALUES (?, ?, ?, ?, ?)',
+         [name, category, image, parseFloat(price), Number(quantity)]
+        );
+        const productId = productResult.insertId;
+
+        // Insert expense
+        const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const amount = parseFloat(price).toFixed(2);
+        const total = (parseFloat(amount) * Number(quantity)).toFixed(2);
+        const detailStr = `เพิ่มสต็อกสินค้า: ${name}`;
+
+        await db.promise().query(
+          'INSERT INTO expense (amount, detail, total, date, id_pro, quantity) VALUES (?, ?, ?, ?, ?, ?)',
+          [amount, detailStr, total, date, productId, Number(quantity)]
+        );
+
+        db.commit((err) => {
+          if (err) {
+            return db.rollback(() => {
+              console.error('Commit error:', err.message);
+              res.status(500).json({ msg: 'Server error' });
+            });
+          }
+          console.log('Product and expense inserted successfully');
+          res.status(201).json({ msg: 'Insert product and expense successfully' });
+        });
+      } catch (error) {
+        db.rollback(() => {
+          console.error('Transaction error:', error.message);
+          res.status(500).json({ msg: 'Error inserting product or expense' });
+        });
       }
-    );
+    });
   } catch (error) {
-    console.error(error);
+    console.error('Server error:', error);
     res.status(500).json({ msg: 'Server error' });
   }
 };
 
+// ฟังก์ชันแก้ไขสินค้า
+exports.editProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, price, quantity } = req.body;
+    let image = req.file ? req.file.filename : null;
 
-// ✅ ฟังก์ชันดึงข้อมูลสินค้าทั้งหมด
+    // Validate inputs
+    if (!name || !category || !price || !quantity) {
+      return res.status(400).json({ msg: 'Missing required fields' });
+    }
+    if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      return res.status(400).json({ msg: 'Invalid price: must be a positive number' });
+    }
+    if (!Number.isInteger(Number(quantity)) || Number(quantity) < 0) {
+      return res.status(400).json({ msg: 'Invalid quantity: must be a non-negative integer' });
+    }
+
+    db.beginTransaction(async (err) => {
+      if (err) {
+        console.error('Transaction error:', err.message);
+        return res.status(500).json({ msg: 'Transaction error' });
+      }
+
+      try {
+        // Get current product data
+        const [productRows] = await db.promise().query('SELECT quantity, price FROM product WHERE id = ?', [id]);
+        if (!productRows.length) {
+          throw new Error('Product not found');
+        }
+        const currentQuantity = Number(productRows[0].quantity);
+        const currentPrice = parseFloat(productRows[0].price);
+
+        // Update product
+        let query = 'UPDATE product SET name = ?, category = ?, price = ?, quantity = ?';
+        let queryParams = [name, category, parseFloat(price), Number(quantity)];
+
+        if (image) {
+          query += ', image = ?';
+          queryParams.push(image);
+        }
+
+        query += ' WHERE id = ?';
+        queryParams.push(id);
+
+        const [updateResult] = await db.promise().query(query, queryParams);
+
+        if (updateResult.affectedRows === 0) {
+          throw new Error('Product not found');
+        }
+
+        // Insert expense if quantity increased
+        const newQuantity = Number(quantity);
+        if (newQuantity > currentQuantity) {
+          const quantityAdded = newQuantity - currentQuantity;
+          const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+          const amount = parseFloat(price).toFixed(2); // Use new price
+          const total = (parseFloat(amount) * quantityAdded).toFixed(2);
+          const detailStr = `เพิ่มสต็อกสินค้า: ${name} (${quantityAdded} หน่วย)`;
+
+          await db.promise().query(
+            'INSERT INTO expense (amount, detail, total, date, id_pro, quantity) VALUES (?, ?, ?, ?, ?, ?)',
+            [amount, detailStr, total, date, id, quantityAdded]
+          );
+        }
+
+        db.commit((err) => {
+          if (err) {
+            return db.rollback(() => {
+              console.error('Commit error:', err.message);
+              res.status(500).json({ msg: 'Server error' });
+            });
+          }
+          console.log('Product updated and expense recorded successfully');
+          res.status(200).json({ msg: 'Product updated successfully' });
+        });
+      } catch (error) {
+        db.rollback(() => {
+          console.error('Transaction error:', error.message);
+          if (error.message === 'Product not found') {
+            res.status(404).json({ msg: 'Product not found' });
+          } else {
+            res.status(500).json({ msg: 'Error updating product or expense' });
+          }
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// ฟังก์ชันดึงข้อมูลสินค้าทั้งหมด
 exports.getAllProduct = (req, res) => {
   const baseUrl = `${req.protocol}://${req.get('host')}/product_image/`;
 
@@ -40,56 +167,13 @@ exports.getAllProduct = (req, res) => {
 
     const updatedResults = results.map((product) => ({
       ...product,
-      image: baseUrl + product.image // แปลงชื่อไฟล์เป็น URL ที่ client เข้าถึงได้
+      image: baseUrl + product.image
     }));
 
     return res.status(200).json(updatedResults);
   });
 };
-// controllers/product.js
 
-// ฟังก์ชันแก้ไขสินค้า
-exports.editProduct = async (req, res) => {
-  try {
-    const { id } = req.params; // Get product ID from URL params
-    const { name, category, price, quantity } = req.body; // Get updated data from request body
-    let image = null;
-
-    // If there's a new image, process it
-    if (req.file) {
-      image = req.file.filename;
-    }
-
-    // Update the product in the database
-    let query = 'UPDATE product SET name = ?, category = ?, price = ?, quantity = ?';
-    let queryParams = [name, category, price, quantity];
-
-    if (image) {
-      query += ', image = ?'; // If a new image was uploaded, add it to the update query
-      queryParams.push(image);
-    }
-
-    query += ' WHERE id = ?'; // Update the product where the id matches
-    queryParams.push(id);
-
-    db.query(query, queryParams, (error, results) => {
-      if (error) {
-        console.error('Error updating product:', error.message);
-        return res.status(500).json({ msg: 'Error updating product' });
-      }
-
-      if (results.affectedRows === 0) {
-        return res.status(404).json({ msg: 'Product not found' });
-      }
-
-      console.log('Product updated successfully:', results);
-      return res.status(200).json({ msg: 'Product updated successfully' });
-    });
-  } catch (error) {
-    console.error('Server error:', error);
-    res.status(500).json({ msg: 'Server error' });
-  }
-};
 // ลบสินค้า
 exports.deleteProduct = (req, res) => {
   const { id } = req.params;
@@ -108,10 +192,6 @@ exports.deleteProduct = (req, res) => {
     return res.status(200).json({ msg: 'Product deleted successfully' });
   });
 };
-
-
-
-// controllers/product.js
 
 // Fetch all products for report (excluding image)
 exports.getReportProduct = async (req, res) => {
@@ -134,22 +214,18 @@ exports.getReportProduct = async (req, res) => {
   }
 };
 
-
-// ... (ฟังก์ชันอื่น ๆ เช่น product, getAllProduct, editProduct, deleteProduct)
-
+// สร้างการขาย
 exports.createSale = async (req, res) => {
   try {
-    const { totalAmount, receivedmoney, emp_id, details } = req.body; // details เป็น array ของ { product_id, quantity, price }
+    const { totalAmount, receivedmoney, emp_id, details } = req.body;
     const date_time = new Date();
 
-    // เริ่ม transaction
     db.beginTransaction((err) => {
       if (err) {
         console.error('Transaction error:', err.message);
         return res.status(500).json({ msg: 'Transaction error' });
       }
 
-      // ตรวจสอบสต็อกสินค้าก่อน
       const stockChecks = details.map((detail) =>
         new Promise((resolve, reject) => {
           db.query(
@@ -172,7 +248,6 @@ exports.createSale = async (req, res) => {
 
       Promise.all(stockChecks)
         .then(() => {
-          // บันทึกข้อมูลการขายลงในตาราง sale
           db.query(
             'INSERT INTO sale (totalAmount, receivedmoney, date_time, emp_id) VALUES (?, ?, ?, ?)',
             [totalAmount, receivedmoney, date_time, emp_id],
@@ -186,7 +261,6 @@ exports.createSale = async (req, res) => {
 
               const sale_id = result.insertId;
 
-              // บันทึก sale_detail
               const detailQueries = details.map((detail) =>
                 new Promise((resolve, reject) => {
                   db.query(
@@ -202,7 +276,6 @@ exports.createSale = async (req, res) => {
 
               Promise.all(detailQueries)
                 .then(() => {
-                  // อัปเดตสต็อกสินค้า
                   const updateStockQueries = details.map((detail) =>
                     new Promise((resolve, reject) => {
                       db.query(
@@ -257,9 +330,7 @@ exports.createSale = async (req, res) => {
   }
 };
 
-
-
-
+// รายงานรายได้
 exports.getIncomeReport = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
@@ -272,7 +343,6 @@ exports.getIncomeReport = async (req, res) => {
       LEFT JOIN sale_detail sd ON s.id = sd.sale_id
       LEFT JOIN product p ON sd.product_id = p.id
       LEFT JOIN employee e ON s.emp_id = e.emp_id
-      
     `;
     const queryParams = [];
 
@@ -290,8 +360,6 @@ exports.getIncomeReport = async (req, res) => {
         console.error('Error fetching income report:', error.message);
         return res.status(500).json({ msg: 'Error fetching income report' });
       }
-
-     
 
       const totalIncome = results.reduce((sum, sale) => sum + parseFloat(sale.totalAmount || 0), 0);
 

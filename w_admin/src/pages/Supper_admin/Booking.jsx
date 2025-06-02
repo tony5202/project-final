@@ -84,15 +84,15 @@ const Booking = () => {
   };
 
   const getTimeSlotDisplay = (booking) => {
-    if (booking.booking_type === 'Event') {
-      return 'ໝົດມື້';
+    if (booking.booking_type === 'event') {
+      return 'ໝົດມື';
     }
     return booking.time_slot || 'N/A';
   };
 
   const getDisplayDate = (booking) => {
     const bookingDate = new Date(booking.booking_date);
-    if (booking.booking_type === 'Event') {
+    if (booking.booking_type === 'event') {
       bookingDate.setDate(bookingDate.getDate() + 1);
     }
     return new Intl.DateTimeFormat('lo-LA', {
@@ -242,7 +242,7 @@ const Booking = () => {
                     <td className="py-4 px-6 border-b text-gray-800">{getTimeSlotDisplay(booking)}</td>
                     <td className="py-4 px-6 border-b text-gray-800">{getDisplayDate(booking)}</td>
                     <td className="py-4 px-6 border-b text-gray-800">
-                      {booking.booking_type === 'Event' ? 'ຈັດກິດຈະກຳ' : 'ເຕະບານ'}
+                      {booking.booking_type === 'event' ? 'ຈັດກິດຈະກຳ' : 'ເຕະບານ'}
                     </td>
                     <td className="py-4 px-6 border-b text-gray-800">
                       {booking.price.toLocaleString('lo-LA')} ກີບ
@@ -346,7 +346,7 @@ const Booking = () => {
                   <div className="text-gray-800">{getDisplayDate(booking)}</div>
                   <div className="font-semibold text-gray-700">ປະເພດ:</div>
                   <div className="text-gray-800">
-                    {booking.booking_type === 'Event' ? 'ຈັດກິດຈະກຳ' : 'ເຕະບານ'}
+                    {booking.booking_type === 'event' ? 'ຈັດກິດຈະກຳ' : 'ເຕະບານ'}
                   </div>
                   <div className="font-semibold text-gray-700">ລາຄາ:</div>
                   <div className="text-gray-800">{booking.price.toLocaleString('lo-LA')} ກີບ</div>

@@ -112,7 +112,7 @@ exports.createBooking = async (req, res) => {
           ))
         )
       `;
-      queryParams = [st_id, endDateTime, startDateTime, startTime, endDateTime, dayEnd, dayStart];
+      queryParams = [st_id, endDateTime, startDateTime, startDateTime, endDateTime, dayEnd, dayStart];
     }
     const [existingBookings] = await db.promise().query(query, queryParams);
     if (existingBookings.length > 0) {
@@ -181,7 +181,6 @@ exports.createBooking = async (req, res) => {
     return res.status(500).json({ msg: 'ຂໍ້ຜິດພາດຂອງເຊີເວີ', error: error.message });
   }
 };
-
 // Get all bookings
 exports.getAllBookings = async (req, res) => {
   try {
@@ -526,36 +525,40 @@ exports.getReportBooking = (req, res) => {
   }
   query += ' ORDER BY b.booking_id DESC';
 
-  db.query(query, queryParams, (error, results) => {
-    if (error) {
-      console.error('Error fetching bookings:', error.message);
-      return res.status(500).json({ msg: 'Error fetching bookings' });
-    }
-    if (results.length === 0) {
-      return res.status(200).json({ msg: 'No bookings found', bookings: [] });
-    }
-    return res.status(200).json(
-      results.map((booking) => ({
-        id: booking.id,
-        user_id: booking.user_id,
-        user_name: booking.user_name,
-        user_phone: booking.user_phone,
-        st_id: booking.st_id,
-        stadium_dtail: booking.stadium_dtail,
-        emp_id: booking.emp_id,
-        employee_username: booking.employee_username,
-        start_time: booking.start_time,
-        end_time: booking.end_time,
-        time_slot: booking.time_slot,
-        price: Number(booking.price),
-        status: booking.status,
-        pre_pay: Number(booking.pre_pay),
-        post_pay: Number(booking.post_pay || 0),
-        booking_type: booking.booking_type,
-        booking_date: booking.booking_date,
-        created_at: booking.created_at,
-      }))
-    );
+db.query(query, queryParams, (error, results) => {
+  if (error) {
+    console.error('Error fetching bookings:', error.message);
+    return res.status(500).json({ msg: 'Error fetching bookings' });
   }
-)
-};
+  if (results.length === 0) {
+    return res.status(200).json({ msg: 'No bookings found', bookings: [] });
+  }
+  return res.status(200).json({
+    bookings: results.map((booking) => ({
+      id: booking.id,
+      user_id: booking.user_id,
+      user_name: booking.user_name,
+      user_phone: booking.user_phone,
+      st_id: booking.st_id,
+      stadium_dtail: booking.stadium_dtail,
+      emp_id: booking.emp_id,
+      employee_username: booking.employee_username,
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+      time_slot: booking.time_slot,
+      price: Number(booking.price),
+      status: booking.status,
+      pre_pay: Number(booking.pre_pay),
+      post_pay: Number(booking.post_pay || 0),
+      booking_type: booking.booking_type,
+      booking_date: booking.booking_date,
+      created_at: booking.created_at,
+    }))
+  });
+});
+
+  
+  
+}
+
+
