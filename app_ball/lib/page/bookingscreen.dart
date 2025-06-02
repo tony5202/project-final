@@ -20,7 +20,7 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   DateTime? selectedDate;
   String? selectedTimeSlot;
-  String bookingType = 'Football';
+  String bookingType = 'football'; // เปลี่ยนจาก 'Football' เป็น 'football'
   bool isLoading = false;
   String? errorMessage;
 
@@ -72,7 +72,8 @@ class _BookingScreenState extends State<BookingScreen> {
     if (selectedDate == null) {
       return false;
     }
-    if (bookingType == 'Football' && selectedTimeSlot == null) {
+    if (bookingType == 'football' && selectedTimeSlot == null) {
+      // เปลี่ยนจาก 'Football' เป็น 'football'
       return false;
     }
 
@@ -80,9 +81,22 @@ class _BookingScreenState extends State<BookingScreen> {
     DateTime startDateTime;
     DateTime endDateTime;
 
-    if (bookingType == 'Event') {
-      startDateTime = DateTime(selectedDate!.year, selectedDate!.month, selectedDate!.day, 0, 0);
-      endDateTime = DateTime(selectedDate!.year, selectedDate!.month, selectedDate!.day, 23, 59);
+    if (bookingType == 'event') {
+      // เปลี่ยนจาก 'Event' เป็น 'event'
+      startDateTime = DateTime(
+        selectedDate!.year,
+        selectedDate!.month,
+        selectedDate!.day,
+        0,
+        0,
+      );
+      endDateTime = DateTime(
+        selectedDate!.year,
+        selectedDate!.month,
+        selectedDate!.day,
+        23,
+        59,
+      );
     } else {
       final selectedSlot = timeSlots.firstWhere(
         (slot) => slot['label'] == selectedTimeSlot,
@@ -131,7 +145,7 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() {
       selectedDate = null;
       selectedTimeSlot = null;
-      bookingType = 'Football';
+      bookingType = 'football'; // เปลี่ยนจาก 'Football' เป็น 'football'
       errorMessage = null;
     });
   }
@@ -141,11 +155,7 @@ class _BookingScreenState extends State<BookingScreen> {
       setState(() {
         errorMessage = 'ກະລຸນາເລືອກວັນແລະເວລາໃຫ້ຖືກຕ້ອງ';
       });
-      CustomSnackBar.show(
-        context,
-        message: errorMessage!,
-        icon: Icons.warning,
-      );
+      CustomSnackBar.show(context, message: errorMessage!, icon: Icons.warning);
       return;
     }
 
@@ -158,11 +168,26 @@ class _BookingScreenState extends State<BookingScreen> {
       DateTime startDateTime;
       DateTime endDateTime;
 
-      if (bookingType == 'Event') {
-        startDateTime = DateTime(selectedDate!.year, selectedDate!.month, selectedDate!.day, 0, 0);
-        endDateTime = DateTime(selectedDate!.year, selectedDate!.month, selectedDate!.day, 23, 59);
+      if (bookingType == 'event') {
+        // เปลี่ยนจาก 'Event' เป็น 'event'
+        startDateTime = DateTime(
+          selectedDate!.year,
+          selectedDate!.month,
+          selectedDate!.day,
+          0,
+          0,
+        );
+        endDateTime = DateTime(
+          selectedDate!.year,
+          selectedDate!.month,
+          selectedDate!.day,
+          23,
+          59,
+        );
       } else {
-        final selectedSlot = timeSlots.firstWhere((slot) => slot['label'] == selectedTimeSlot!);
+        final selectedSlot = timeSlots.firstWhere(
+          (slot) => slot['label'] == selectedTimeSlot!,
+        );
         final startHour = int.parse(selectedSlot['start']!.split(':')[0]);
         final startMinute = int.parse(selectedSlot['start']!.split(':')[1]);
         final endHour = int.parse(selectedSlot['end']!.split(':')[0]);
@@ -198,13 +223,14 @@ class _BookingScreenState extends State<BookingScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ReviewBookingScreen(
-                user: widget.user,
-                stadium: widget.stadium,
-                startTime: startDateTime,
-                endTime: endDateTime,
-                bookingType: bookingType,
-              ),
+              builder:
+                  (context) => ReviewBookingScreen(
+                    user: widget.user,
+                    stadium: widget.stadium,
+                    startTime: startDateTime,
+                    endTime: endDateTime,
+                    bookingType: bookingType,
+                  ),
             ),
           );
         } else {
@@ -225,11 +251,7 @@ class _BookingScreenState extends State<BookingScreen> {
       setState(() {
         errorMessage = 'ເກີດຂໍ້ຜິດພາດ: ${e.toString()}';
       });
-      CustomSnackBar.show(
-        context,
-        message: errorMessage!,
-        icon: Icons.warning,
-      );
+      CustomSnackBar.show(context, message: errorMessage!, icon: Icons.warning);
     } finally {
       setState(() {
         isLoading = false;
@@ -252,7 +274,10 @@ class _BookingScreenState extends State<BookingScreen> {
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
-              title: const Text('ຈອງເດີ່ນ', style: TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(
+                '${widget.user.username} ຈອງເດີ່ນ', // อัปเดตให้ตรงกับ AppBar จากคำถามก่อนหน้า
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               backgroundColor: Colors.green[700],
               elevation: 0,
               pinned: true,
@@ -272,13 +297,19 @@ class _BookingScreenState extends State<BookingScreen> {
                   children: [
                     Card(
                       color: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
                       elevation: 4.0,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Row(
                           children: [
-                            Icon(Icons.sports_soccer, color: Colors.green[700], size: 28.0),
+                            Icon(
+                              Icons.sports_soccer,
+                              color: Colors.green[700],
+                              size: 28.0,
+                            ),
                             const SizedBox(width: 12.0),
                             Expanded(
                               child: Text(
@@ -306,7 +337,9 @@ class _BookingScreenState extends State<BookingScreen> {
                     ),
                     Card(
                       color: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
                       elevation: 4.0,
                       child: Column(
                         children: [
@@ -315,25 +348,34 @@ class _BookingScreenState extends State<BookingScreen> {
                               'ເຕະບານ (${priceFormat.format(double.tryParse(widget.stadium['price']?.toString() ?? '0') ?? 0)} ກີບ)',
                               style: const TextStyle(color: Colors.black87),
                             ),
-                            value: 'Football',
+                            value:
+                                'football', // เปลี่ยนจาก 'Football' เป็น 'football'
                             groupValue: bookingType,
                             activeColor: Colors.green[700],
-                            secondary: Icon(Icons.sports_soccer, color: Colors.green[700]),
-                            onChanged: (value) => setState(() => bookingType = value!),
+                            secondary: Icon(
+                              Icons.sports_soccer,
+                              color: Colors.green[700],
+                            ),
+                            onChanged:
+                                (value) => setState(() => bookingType = value!),
                           ),
                           RadioListTile<String>(
                             title: Text(
                               'ຈັດກິດຈະກຳ (${priceFormat.format(double.tryParse(widget.stadium['price2']?.toString() ?? '0') ?? 0)} ກີບ - ເຫມົາທັງມື້)',
                               style: const TextStyle(color: Colors.black87),
                             ),
-                            value: 'Event',
+                            value: 'event', // เปลี่ยนจาก 'Event' เป็น 'event'
                             groupValue: bookingType,
                             activeColor: Colors.green[700],
-                            secondary: Icon(Icons.event, color: Colors.green[700]),
-                            onChanged: (value) => setState(() {
-                              bookingType = value!;
-                              selectedTimeSlot = null;
-                            }),
+                            secondary: Icon(
+                              Icons.event,
+                              color: Colors.green[700],
+                            ),
+                            onChanged:
+                                (value) => setState(() {
+                                  bookingType = value!;
+                                  selectedTimeSlot = null;
+                                }),
                           ),
                         ],
                       ),
@@ -341,21 +383,33 @@ class _BookingScreenState extends State<BookingScreen> {
                     const SizedBox(height: 20),
                     Card(
                       color: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
                       elevation: 4.0,
                       child: ListTile(
-                        leading: Icon(Icons.calendar_today, color: Colors.green[700]),
+                        leading: Icon(
+                          Icons.calendar_today,
+                          color: Colors.green[700],
+                        ),
                         title: Text(
                           selectedDate == null
                               ? 'ເລືອກວັນ'
-                              : DateFormat('dd/MM/yyyy', 'lo').format(selectedDate!),
-                          style: const TextStyle(fontSize: 16, color: Colors.black87),
+                              : DateFormat(
+                                'dd/MM/yyyy',
+                                'lo',
+                              ).format(selectedDate!),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                          ),
                         ),
                         onTap: () => _selectDate(context),
                       ),
                     ),
                     const SizedBox(height: 20),
-                    if (bookingType == 'Football') ...[
+                    if (bookingType == 'football') ...[
+                      // เปลี่ยนจาก 'Football' เป็น 'football'
                       const Text(
                         'ຊ່ວງເວລາ:',
                         style: TextStyle(
@@ -366,25 +420,43 @@ class _BookingScreenState extends State<BookingScreen> {
                       ),
                       Card(
                         color: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
                         elevation: 4.0,
                         child: Column(
-                          children: timeSlots
-                              .map((slot) => RadioListTile<String>(
-                                    title: Text(slot['label']!, style: const TextStyle(color: Colors.black87)),
-                                    value: slot['label']!,
-                                    groupValue: selectedTimeSlot,
-                                    activeColor: Colors.green[700],
-                                    secondary: Icon(Icons.access_time, color: Colors.green[700]),
-                                    onChanged: (value) => setState(() => selectedTimeSlot = value!),
-                                  ))
-                              .toList(),
+                          children:
+                              timeSlots
+                                  .map(
+                                    (slot) => RadioListTile<String>(
+                                      title: Text(
+                                        slot['label']!,
+                                        style: const TextStyle(
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      value: slot['label']!,
+                                      groupValue: selectedTimeSlot,
+                                      activeColor: Colors.green[700],
+                                      secondary: Icon(
+                                        Icons.access_time,
+                                        color: Colors.green[700],
+                                      ),
+                                      onChanged:
+                                          (value) => setState(
+                                            () => selectedTimeSlot = value!,
+                                          ),
+                                    ),
+                                  )
+                                  .toList(),
                         ),
                       ),
                     ] else ...[
                       Card(
                         color: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
                         elevation: 4.0,
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
@@ -407,47 +479,63 @@ class _BookingScreenState extends State<BookingScreen> {
                     ],
                     const SizedBox(height: 20),
                     Center(
-                      child: isLoading
-                          ? CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.green[700]!),
-                            )
-                          : AnimatedScaleButton(
-                              onPressed: _isValidSelection() ? _checkAvailability : null,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [Colors.green[500]!, Colors.green[700]!],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(30.0),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 8.0,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                      child:
+                          isLoading
+                              ? CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.green[700]!,
                                 ),
-                                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.check_circle, color: Colors.white, size: 20.0),
-                                    const SizedBox(width: 8.0),
-                                    const Text(
-                                      'ກວດເຊັກຄວາມວ່າງ',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Roboto',
-                                      ),
+                              )
+                              : AnimatedScaleButton(
+                                onPressed:
+                                    _isValidSelection()
+                                        ? _checkAvailability
+                                        : null,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.green[500]!,
+                                        Colors.green[700]!,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                  ],
+                                    borderRadius: BorderRadius.circular(30.0),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 8.0,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 40,
+                                    vertical: 15,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.check_circle,
+                                        color: Colors.white,
+                                        size: 20.0,
+                                      ),
+                                      const SizedBox(width: 8.0),
+                                      const Text(
+                                        'ກວດເຊັກຄວາມວ່າງ',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Roboto',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
                     ),
                   ],
                 ),
@@ -465,7 +553,11 @@ class AnimatedScaleButton extends StatefulWidget {
   final VoidCallback? onPressed;
   final Widget child;
 
-  const AnimatedScaleButton({super.key, required this.onPressed, required this.child});
+  const AnimatedScaleButton({
+    super.key,
+    required this.onPressed,
+    required this.child,
+  });
 
   @override
   __AnimatedScaleButtonState createState() => __AnimatedScaleButtonState();
@@ -505,9 +597,7 @@ class __AnimatedScaleButtonState extends State<AnimatedScaleButton>
       onTapCancel: () {
         _controller.reverse();
       },
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: widget.child,
-      ),
+      child: ScaleTransition(scale: _scaleAnimation, child: widget.child),
     );
-  }}
+  }
+}

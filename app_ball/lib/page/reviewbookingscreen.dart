@@ -4,7 +4,6 @@ import 'package:app_ball/Modle/user_model.dart';
 import 'package:app_ball/Tab%20bar/history.dart';
 import 'package:app_ball/custom_snackbar.dart/custom_snackbar.dart';
 import 'package:app_ball/ipapp.dart';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -76,9 +75,12 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
     });
 
     try {
-      final price = widget.bookingType == 'Football'
-          ? double.tryParse(widget.stadium['price']?.toString() ?? '0') ?? 0
-          : double.tryParse(widget.stadium['price2']?.toString() ?? '0') ?? 0;
+      final price =
+          widget.bookingType ==
+                  'football' // เปลี่ยนจาก 'Football' เป็น 'football'
+              ? double.tryParse(widget.stadium['price']?.toString() ?? '0') ?? 0
+              : double.tryParse(widget.stadium['price2']?.toString() ?? '0') ??
+                  0;
       final prePay = price * 0.3;
 
       var request = http.MultipartRequest(
@@ -112,9 +114,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
         // Navigate to History screen
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => History(user: widget.user),
-          ),
+          MaterialPageRoute(builder: (context) => History(user: widget.user)),
         );
       } else {
         throw Exception(responseData['msg'] ?? 'ບໍ່ສາມາດຈອງໄດ້');
@@ -133,9 +133,11 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final price = widget.bookingType == 'Football'
-        ? double.tryParse(widget.stadium['price']?.toString() ?? '0') ?? 0
-        : double.tryParse(widget.stadium['price2']?.toString() ?? '0') ?? 0;
+    final price =
+        widget.bookingType ==
+                'football' // เปลี่ยนจาก 'Football' เป็น 'football'
+            ? double.tryParse(widget.stadium['price']?.toString() ?? '0') ?? 0
+            : double.tryParse(widget.stadium['price2']?.toString() ?? '0') ?? 0;
     final prePay = price * 0.3;
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -251,7 +253,8 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                                 ),
                                 const SizedBox(width: 12.0),
                                 Text(
-                                  widget.bookingType == 'Event'
+                                  widget.bookingType ==
+                                          'event' // เปลี่ยนจาก 'Event' เป็น 'event'
                                       ? 'ເວລາ: ທັງມື້ (8:00 - 20:00)'
                                       : 'ເວລາ: ${TimeOfDay.fromDateTime(widget.startTime).format(context)} - ${TimeOfDay.fromDateTime(widget.endTime).format(context)}',
                                   style: const TextStyle(color: Colors.black87),
@@ -264,7 +267,7 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                                 Icon(Icons.category, color: Colors.green[700]),
                                 const SizedBox(width: 12.0),
                                 Text(
-                                  'ປະເພດ: ${widget.bookingType == 'Football' ? 'ເຕະບາ' : 'ອີເວັນ'}',
+                                  'ປະເພດ: ${widget.bookingType == 'football' ? 'ເຕະບາ' : 'ອີເວັນ'}', // เปลี่ยนจาก 'Football' เป็น 'football'
                                   style: const TextStyle(color: Colors.black87),
                                 ),
                               ],
@@ -407,59 +410,60 @@ class _ReviewBookingScreenState extends State<ReviewBookingScreen> {
                     ],
                     const SizedBox(height: 20),
                     Center(
-                      child: isLoading
-                          ? CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.green[700]!,
-                              ),
-                            )
-                          : AnimatedScaleButton(
-                              onPressed: _confirmBooking,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.green[500]!,
-                                      Colors.green[700]!,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(30.0),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 8.0,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                      child:
+                          isLoading
+                              ? CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.green[700]!,
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 40,
-                                  vertical: 15,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      color: Colors.white,
-                                      size: 20.0,
+                              )
+                              : AnimatedScaleButton(
+                                onPressed: _confirmBooking,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.green[500]!,
+                                        Colors.green[700]!,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                    const SizedBox(width: 8.0),
-                                    const Text(
-                                      'ຢືນຢັນການຈອງ',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Roboto',
+                                    borderRadius: BorderRadius.circular(30.0),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 8.0,
+                                        offset: const Offset(0, 4),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 40,
+                                    vertical: 15,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.check_circle,
+                                        color: Colors.white,
+                                        size: 20.0,
+                                      ),
+                                      const SizedBox(width: 8.0),
+                                      const Text(
+                                        'ຢືນຢັນການຈອງ',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Roboto',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
                     ),
                   ],
                 ),
@@ -522,4 +526,5 @@ class __AnimatedScaleButtonState extends State<AnimatedScaleButton>
       },
       child: ScaleTransition(scale: _scaleAnimation, child: widget.child),
     );
-  }}
+  }
+}

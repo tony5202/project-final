@@ -11,7 +11,7 @@ exports.createBooking = async (req, res) => {
       status = 'pending',
       pre_pay = 0,
       post_pay = 0,
-      booking_type = 'Football',
+      booking_type = 'football',
       emp_id
     } = req.body;
 
@@ -40,7 +40,7 @@ exports.createBooking = async (req, res) => {
     }
 
     // Validate booking_type
-    if (!['Football', 'Event'].includes(booking_type)) {
+    if (!['football', 'event'].includes(booking_type)) {
       return res.status(400).json({ msg: 'ປະເພດການຈອງຬໍ່ຖືກຕ້ອງ' });
     }
 
@@ -55,7 +55,7 @@ exports.createBooking = async (req, res) => {
     }
 
     // Validate Event booking covers full day
-    if (booking_type === 'Event') {
+    if (booking_type === 'event') {
       const expectedStart = new Date(startDateTime.getFullYear(), startDateTime.getMonth(), startDateTime.getDate(), 0, 0);
       const expectedEnd = new Date(startDateTime.getFullYear(), startDateTime.getMonth(), startDateTime.getDate(), 23, 59);
       if (
@@ -67,15 +67,15 @@ exports.createBooking = async (req, res) => {
     }
 
     // Check user and stadium
-    const [user] = await db.promise().query('SELECT id FROM User WHERE id = ?', [user_id]);
-    const [stadium] = await db.promise().query('SELECT st_id FROM Stadium WHERE st_id = ?', [st_id]);
+    const [user] = await db.promise().query('SELECT id FROM user WHERE id = ?', [user_id]);
+    const [stadium] = await db.promise().query('SELECT st_id FROM stadium WHERE st_id = ?', [st_id]);
     if (!user.length || !stadium.length) {
       return res.status(400).json({ msg: 'ຜູ້ໃຊ້ ຫຼື ສະໜາມຬໍ່ພົບ' });
     }
 
     // Check emp_id if provided
     if (emp_id) {
-      const [employee] = await db.promise().query('SELECT emp_id FROM Employee WHERE emp_id = ?', [emp_id]);
+      const [employee] = await db.promise().query('SELECT emp_id FROM employee WHERE emp_id = ?', [emp_id]);
       if (!employee.length) {
         return res.status(400).json({ msg: 'ພະນັກງານຬໍ່ພົບ' });
       }
@@ -86,9 +86,9 @@ exports.createBooking = async (req, res) => {
     const dayEnd = new Date(startDateTime.getFullYear(), startDateTime.getMonth(), startDateTime.getDate(), 23, 59);
     let queryParams;
     let query;
-    if (booking_type === 'Event') {
+    if (booking_type === 'event') {
       query = `
-        SELECT * FROM Booking 
+        SELECT * FROM booking 
         WHERE st_id = ? 
         AND status != 'cancelled'
         AND (
@@ -99,29 +99,29 @@ exports.createBooking = async (req, res) => {
       queryParams = [st_id, dayEnd, dayStart, dayStart, dayEnd];
     } else {
       query = `
-        SELECT * FROM Booking 
+        SELECT * FROM booking 
         WHERE st_id = ? 
         AND status != 'cancelled'
         AND (
-          (booking_type = 'Football' AND (
+          (booking_type = 'football' AND (
             (start_time <= ? AND end_time > ?) OR
             (start_time >= ? AND start_time < ?)
           )) OR
-          (booking_type = 'Event' AND (
+          (booking_type = 'event' AND (
             start_time <= ? AND end_time >= ?
           ))
         )
       `;
-      queryParams = [st_id, endDateTime, startDateTime, startDateTime, endDateTime, dayEnd, dayStart];
+      queryParams = [st_id, endDateTime, startDateTime, startTime, endDateTime, dayEnd, dayStart];
     }
     const [existingBookings] = await db.promise().query(query, queryParams);
     if (existingBookings.length > 0) {
-      const hasFootball = existingBookings.some(booking => booking.booking_type === 'Football');
-      const hasEvent = existingBookings.some(booking => booking.booking_type === 'Event');
+      const hasFootball = existingBookings.some(booking => booking.booking_type === 'football');
+      const hasEvent = existingBookings.some(booking => booking.booking_type === 'event');
       let errorMsg = 'ຊ່ວງເວລານີ້ຬໍ່ວ່າງ';
-      if (booking_type === 'Event' && hasFootball) {
+      if (booking_type === 'event' && hasFootball) {
         errorMsg = 'ວັນນີ້ຬໍ່ວ່າງເນື່ອງຈາກມີການຈອງຟຸດບານ';
-      } else if (booking_type === 'Football' && hasEvent) {
+      } else if (booking_type === 'football' && hasEvent) {
         errorMsg = 'ວັນນີ້ຬໍ່ວ່າງເນື່ອງຈາກມີການຈອງອີເວັນ';
       }
       return res.status(400).json({ msg: errorMsg });
@@ -130,9 +130,9 @@ exports.createBooking = async (req, res) => {
     // Handle slip_payment
     const slip_payment = req.file ? req.file.filename : null;
 
-    // Insert into Booking
+    // Insert into booking
     const insertQuery = `
-      INSERT INTO Booking (
+      INSERT INTO booking (
         user_id, st_id, emp_id, start_time, end_time, price, status,
         pre_pay, post_pay, slip_payment, booking_type, booking_date
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -181,6 +181,7 @@ exports.createBooking = async (req, res) => {
     return res.status(500).json({ msg: 'ຂໍ້ຜິດພາດຂອງເຊີເວີ', error: error.message });
   }
 };
+
 // Get all bookings
 exports.getAllBookings = async (req, res) => {
   try {
@@ -204,9 +205,9 @@ exports.getAllBookings = async (req, res) => {
         s.dtail AS stadium_dtail, 
         u.name AS user_name,
         u.phone AS user_phone
-      FROM Booking b
-      JOIN Stadium s ON b.st_id = s.st_id
-      JOIN User u ON b.user_id = u.id
+      FROM booking b
+      JOIN stadium s ON b.st_id = s.st_id
+      JOIN user u ON b.user_id = u.id
       ORDER BY b.booking_id DESC
     `);
 
@@ -243,7 +244,6 @@ exports.getAllBookings = async (req, res) => {
   }
 };
 
-
 // Get bookings for a specific user
 exports.getUserBookings = async (req, res) => {
   try {
@@ -253,7 +253,7 @@ exports.getUserBookings = async (req, res) => {
       return res.status(400).json({ msg: 'ກະລຸນາລະບຸ user_id ທີ່ຖືກຕ້ອງ' });
     }
 
-    const [user] = await db.promise().query('SELECT id FROM User WHERE id = ?', [user_id]);
+    const [user] = await db.promise().query('SELECT id FROM user WHERE id = ?', [user_id]);
     if (!user.length) {
       return res.status(404).json({ msg: 'ຜູ້ໃຊ້ຬໍ່ພົບ' });
     }
@@ -263,9 +263,9 @@ exports.getUserBookings = async (req, res) => {
               CONCAT(TIME_FORMAT(b.start_time, '%H:%i'), '-', TIME_FORMAT(b.end_time, '%H:%i')) AS time_slot,
               b.price, b.status, b.pre_pay, b.post_pay, b.slip_payment, b.booking_type, b.booking_date,
               b.createdAt AS created_at, s.dtail AS stadium_dtail, u.name AS user_name
-       FROM Booking b
-       JOIN Stadium s ON b.st_id = s.st_id
-       JOIN User u ON b.user_id = u.id
+       FROM booking b
+       JOIN stadium s ON b.st_id = s.st_id
+       JOIN user u ON b.user_id = u.id
        WHERE b.user_id = ?
        ORDER BY b.booking_id DESC`,
       [user_id]
@@ -330,12 +330,12 @@ exports.checkAvailability = async (req, res) => {
     }
 
     // Validate booking_type
-    if (!['Football', 'Event'].includes(booking_type)) {
+    if (!['football', 'event'].includes(booking_type)) {
       return res.status(400).json({ msg: 'ປະເພດການຈອງຬໍ່ຖືກຕ້ອງ' });
     }
 
     // Check if stadium exists
-    const [stadium] = await db.promise().query('SELECT st_id FROM Stadium WHERE st_id = ?', [st_id]);
+    const [stadium] = await db.promise().query('SELECT st_id FROM stadium WHERE st_id = ?', [st_id]);
     if (!stadium.length) {
       return res.status(404).json({ msg: 'ສະໜາມຬໍ່ພົບ' });
     }
@@ -345,10 +345,10 @@ exports.checkAvailability = async (req, res) => {
     const dayEnd = new Date(startDateTime.getFullYear(), startDateTime.getMonth(), startDateTime.getDate(), 23, 59);
     let queryParams;
     let query;
-    if (booking_type === 'Event') {
+    if (booking_type === 'event') {
       // Check for any bookings (Football or Event) on the same day
       query = `
-        SELECT * FROM Booking 
+        SELECT * FROM booking 
         WHERE st_id = ? 
         AND status != 'cancelled'
         AND (
@@ -360,15 +360,15 @@ exports.checkAvailability = async (req, res) => {
     } else {
       // Check for overlapping Football bookings and any Event bookings on the same day
       query = `
-        SELECT * FROM Booking 
+        SELECT * FROM booking 
         WHERE st_id = ? 
         AND status != 'cancelled'
         AND (
-          (booking_type = 'Football' AND (
+          (booking_type = 'football' AND (
             (start_time <= ? AND end_time > ?) OR
             (start_time >= ? AND start_time < ?)
           )) OR
-          (booking_type = 'Event' AND (
+          (booking_type = 'event' AND (
             start_time <= ? AND end_time >= ?
           ))
         )
@@ -378,12 +378,12 @@ exports.checkAvailability = async (req, res) => {
     const [existingBookings] = await db.promise().query(query, queryParams);
 
     if (existingBookings.length > 0) {
-      const hasFootball = existingBookings.some(booking => booking.booking_type === 'Football');
-      const hasEvent = existingBookings.some(booking => booking.booking_type === 'Event');
-      let errorMsg = 'ຊ່ວງເວລານີ້ບໍ່ວ່າງ';
-      if (booking_type === 'Event' && hasFootball) {
+      const hasFootball = existingBookings.some(booking => booking.booking_type === 'football');
+      const hasEvent = existingBookings.some(booking => booking.booking_type === 'event');
+      let errorMsg = 'ຊ່ວງເວລານີ້ຬໍ່ວ່າງ';
+      if (booking_type === 'event' && hasFootball) {
         errorMsg = 'ວັນນີ້ຬໍ່ວ່າງເນື່ອງຈາກມີການຈອງຟຸດບານ';
-      } else if (booking_type === 'Football' && hasEvent) {
+      } else if (booking_type === 'football' && hasEvent) {
         errorMsg = 'ວັນນີ້ຬໍ່ວ່າງເນື່ອງຈາກມີການຈອງອີເວັນ';
       }
       return res.status(400).json({ msg: errorMsg });
@@ -420,15 +420,15 @@ exports.updateBookingStatus = async (req, res) => {
     }
 
     // Check if booking exists
-    const [booking] = await db.promise().query('SELECT * FROM Booking WHERE booking_id = ?', [booking_id]);
+    const [booking] = await db.promise().query('SELECT * FROM booking WHERE booking_id = ?', [booking_id]);
     if (!booking.length) {
       return res.status(404).json({ msg: 'ບໍ່ພົບການຈອງ' });
     }
 
     // Check if employee exists
-    const [employee] = await db.promise().query('SELECT emp_id FROM Employee WHERE emp_id = ?', [emp_id]);
+    const [employee] = await db.promise().query('SELECT emp_id FROM employee WHERE emp_id = ?', [emp_id]);
     if (!employee.length) {
-      return res.status(400).json({ msg: 'ພະນັກງານບໍ່ພົບ' });
+      return res.status(400).json({ msg: 'ພະນັກງານຬໍ່ພົບ' });
     }
 
     // Prevent updating if already in a terminal state
@@ -437,7 +437,7 @@ exports.updateBookingStatus = async (req, res) => {
     }
 
     // Update booking status and emp_id
-    const updateQuery = 'UPDATE Booking SET status = ?, emp_id = ? WHERE booking_id = ?';
+    const updateQuery = 'UPDATE booking SET status = ?, emp_id = ? WHERE booking_id = ?';
     await db.promise().query(updateQuery, [status, emp_id, booking_id]);
 
     // Fetch updated booking
@@ -446,9 +446,9 @@ exports.updateBookingStatus = async (req, res) => {
              CONCAT(TIME_FORMAT(b.start_time, '%H:%i'), '-', TIME_FORMAT(b.end_time, '%H:%i')) AS time_slot,
              b.price, b.status, b.pre_pay, b.post_pay, b.slip_payment, b.booking_type, b.booking_date,
              s.dtail AS stadium_dtail, u.name AS user_name
-      FROM Booking b
-      JOIN Stadium s ON b.st_id = s.st_id
-      JOIN User u ON b.user_id = u.id
+      FROM booking b
+      JOIN stadium s ON b.st_id = s.st_id
+      JOIN user u ON b.user_id = u.id
       WHERE b.booking_id = ?
     `, [booking_id]);
 
@@ -478,6 +478,8 @@ exports.updateBookingStatus = async (req, res) => {
     return res.status(500).json({ msg: 'ຂໍ້ຜິດພາດຂອງເຊີເວີ', error: error.message });
   }
 };
+
+// Get booking report
 exports.getReportBooking = (req, res) => {
   const { startDate, endDate, status } = req.query;
 
@@ -501,11 +503,11 @@ exports.getReportBooking = (req, res) => {
       s.dtail AS stadium_dtail, 
       u.name AS user_name,
       u.phone AS user_phone,
-      e.username AS username
-    FROM Booking b
-    JOIN Stadium s ON b.st_id = s.st_id
-    JOIN User u ON b.user_id = u.id
-    JOIN Employee e ON b.emp_id = e.emp_id
+      e.username AS employee_username
+    FROM booking b
+    JOIN stadium s ON b.st_id = s.st_id
+    JOIN user u ON b.user_id = u.id
+    JOIN employee e ON b.emp_id = e.emp_id
     WHERE 1=1
   `;
   const queryParams = [];
@@ -541,7 +543,7 @@ exports.getReportBooking = (req, res) => {
         st_id: booking.st_id,
         stadium_dtail: booking.stadium_dtail,
         emp_id: booking.emp_id,
-        username: booking.username,
+        employee_username: booking.employee_username,
         start_time: booking.start_time,
         end_time: booking.end_time,
         time_slot: booking.time_slot,
@@ -554,5 +556,6 @@ exports.getReportBooking = (req, res) => {
         created_at: booking.created_at,
       }))
     );
-  });
+  }
+)
 };
